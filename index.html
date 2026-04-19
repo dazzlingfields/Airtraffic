@@ -6,483 +6,582 @@
   <title>ADS-B NZ Aircraft Tracker</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTR9BMY=" crossorigin="" />
   <style>
-    :root{
-      --bg:#f8fafc;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#64748b;
-      --line:#e2e8f0;
-      --soft:#f1f5f9;
-      --accent:#0f172a;
-      --success-bg:#dcfce7;
-      --success-text:#166534;
-      --warning-bg:#fef3c7;
-      --warning-text:#92400e;
-      --info-bg:#e0f2fe;
-      --info-text:#075985;
-      --neutral-bg:#e2e8f0;
-      --neutral-text:#334155;
-      --error-bg:#fee2e2;
-      --error-text:#991b1b;
-      --shadow: 0 1px 2px rgba(15,23,42,.06), 0 10px 28px rgba(15,23,42,.06);
-      --radius: 24px;
-      --radius-lg: 32px;
-      --max: 1280px;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    :root {
+      --bg: #0b1120;
+      --panel: rgba(30, 41, 59, 0.7);
+      --panel-border: rgba(51, 65, 85, 0.8);
+      --panel-hover: rgba(30, 41, 59, 0.95);
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --accent-glow: rgba(56, 189, 248, 0.3);
+      
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.15);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.15);
+      --info: #38bdf8;
+      --info-bg: rgba(56, 189, 248, 0.15);
+      --neutral: #64748b;
+      --neutral-bg: rgba(100, 116, 139, 0.15);
+      --error: #ef4444;
+      --error-bg: rgba(239, 68, 68, 0.15);
+      
+      --radius: 16px;
+      --radius-lg: 24px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      --max: 1360px;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      background:var(--bg);
-      color:var(--text);
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(14, 165, 233, 0.08), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.05), transparent 25%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
     }
-    a{color:inherit}
-    .wrap{
-      max-width:var(--max);
-      margin:0 auto;
-      padding:24px 16px 40px;
+
+    a { color: var(--accent); text-decoration: none; }
+    
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    .wrap {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 32px 20px 60px;
     }
-    .hero{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius-lg);
-      padding:24px;
-      box-shadow:var(--shadow);
-      margin-bottom:20px;
+
+    /* --- Typography & Headers --- */
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(to right, #f8fafc, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 12px;
-      border-radius:999px;
-      background:var(--soft);
-      color:#334155;
-      font-size:12px;
-      font-weight:700;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-      margin-bottom:14px;
+
+    .lead {
+      margin: 12px 0 0;
+      color: var(--text-muted);
+      line-height: 1.6;
+      font-size: 16px;
+      max-width: 800px;
     }
-    h1{
-      margin:0;
-      font-size:clamp(30px, 4vw, 44px);
-      line-height:1.06;
-      letter-spacing:-.03em;
+
+    .section-title {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text-main);
     }
-    .lead{
-      margin:12px 0 0;
-      max-width:980px;
-      color:var(--muted);
-      line-height:1.6;
-      font-size:15px;
+
+    .subtle {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
     }
-    .controls{
-      margin-top:20px;
-      display:grid;
-      grid-template-columns:minmax(300px, 1fr) auto auto;
-      gap:10px;
-      align-items:end;
+
+    /* --- Glass Panels --- */
+    .hero, .card {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 24px;
     }
-    .field label{
-      display:block;
-      font-size:14px;
-      font-weight:600;
-      color:#334155;
-      margin-bottom:8px;
+
+    .hero { margin-bottom: 24px; padding: 32px; }
+
+    /* --- Badges & Pills --- */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
     }
-    .input-wrap{
-      position:relative;
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      gap: 6px;
     }
-    input{
-      width:100%;
-      border:1px solid #cbd5e1;
-      border-radius:18px;
-      padding:14px 16px 14px 44px;
-      font-size:16px;
-      outline:none;
-      background:#fff;
-      transition:.15s border-color, .15s box-shadow;
+
+    .pill.success { background: var(--success-bg); color: var(--success); border-color: rgba(16, 185, 129, 0.3); }
+    .pill.warning { background: var(--warning-bg); color: var(--warning); border-color: rgba(245, 158, 11, 0.3); }
+    .pill.info { background: var(--info-bg); color: var(--info); border-color: rgba(56, 189, 248, 0.3); }
+    .pill.neutral { background: var(--neutral-bg); color: var(--neutral); border-color: rgba(100, 116, 139, 0.3); }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: currentColor;
+      border-radius: 50%;
+      display: inline-block;
     }
-    input:focus{
-      border-color:#94a3b8;
-      box-shadow:0 0 0 4px rgba(148,163,184,.18);
+    .pill.success .pulse-dot { box-shadow: 0 0 8px currentColor; animation: pulse 2s infinite; }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+      100% { transform: scale(0.95); opacity: 1; }
     }
-    .search-icon{
-      position:absolute;
-      left:16px;
-      top:50%;
-      transform:translateY(-50%);
-      width:18px;
-      height:18px;
-      color:#94a3b8;
-      pointer-events:none;
+
+    /* --- Forms & Controls --- */
+    .controls {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: minmax(300px, 1fr) auto auto;
+      gap: 12px;
+      align-items: end;
     }
-    button{
-      border:0;
-      border-radius:18px;
-      padding:14px 18px;
-      font-weight:700;
-      font-size:15px;
-      cursor:pointer;
-      transition:.15s transform, .15s opacity, .15s background;
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    button:hover{transform:translateY(-1px)}
-    .primary{
-      background:var(--accent);
-      color:white;
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      justify-content:center;
-      min-width:130px;
+
+    .input-wrap { position: relative; }
+
+    input {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      border-radius: 16px;
+      padding: 14px 16px 14px 44px;
+      font-size: 16px;
+      font-weight: 500;
+      outline: none;
+      transition: 0.2s all;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
     }
-    .secondary{
-      background:#e2e8f0;
-      color:#0f172a;
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      justify-content:center;
-      min-width:150px;
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+      background: rgba(15, 23, 42, 0.9);
     }
-    .secondary:hover{background:#cbd5e1}
-    .primary:disabled,.secondary:disabled{opacity:.65; cursor:not-allowed}
-    .examples{
-      margin-top:12px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
     }
-    .chip{
-      background:var(--soft);
-      border:1px solid var(--line);
-      color:#334155;
-      padding:8px 12px;
-      border-radius:999px;
-      font-size:13px;
-      font-weight:600;
-      cursor:pointer;
+
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 20px;
+      font-weight: 600;
+      font-size: 15px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: 0.2s all;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
-    .chip:hover{background:#e2e8f0}
-    .alert{
-      display:none;
-      margin:0 0 20px;
-      border-radius:18px;
-      padding:14px 16px;
-      border:1px solid #fecaca;
-      background:var(--error-bg);
-      color:var(--error-text);
-      font-size:14px;
-      line-height:1.5;
+
+    button:active { transform: scale(0.98); }
+
+    .primary {
+      background: var(--accent);
+      color: #0b1120;
+      box-shadow: 0 4px 14px var(--accent-glow);
     }
-    .grid{
-      display:grid;
-      grid-template-columns:1.65fr 1fr;
-      gap:20px;
-      align-items:start;
+    .primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4); }
+
+    .secondary {
+      background: rgba(51, 65, 85, 0.5);
+      color: var(--text-main);
+      border: 1px solid var(--panel-border);
     }
-    .stack{display:grid; gap:20px;}
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius-lg);
-      box-shadow:var(--shadow);
-      padding:22px;
+    .secondary:hover:not(:disabled) { background: rgba(51, 65, 85, 0.8); }
+
+    .primary:disabled, .secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Chips */
+    .examples {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
     }
-    .heading-row{
-      display:flex;
-      justify-content:space-between;
-      gap:16px;
-      align-items:flex-start;
-      flex-wrap:wrap;
-      margin-bottom:16px;
+    .examples span { font-size: 13px; color: var(--text-muted); margin-right: 4px; }
+    
+    .chip {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
     }
-    .eyebrow{
-      color:var(--muted);
-      font-size:14px;
-      font-weight:600;
+    .chip:hover {
+      background: rgba(51, 65, 85, 0.4);
+      color: var(--text-main);
+      border-color: var(--text-muted);
     }
-    .status-title{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-top:6px;
+
+    /* --- Alerts --- */
+    .alert {
+      display: none;
+      margin: 0 0 24px;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      background: var(--error-bg);
+      color: #fca5a5;
+      font-size: 14px;
+      font-weight: 500;
+      backdrop-filter: blur(8px);
     }
-    .status-title h2{
-      margin:0;
-      font-size:clamp(22px, 2.4vw, 32px);
-      letter-spacing:-.03em;
+
+    /* --- Layout Grids --- */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 24px;
+      align-items: start;
     }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      padding:7px 12px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:700;
-      border:1px solid transparent;
-      white-space:nowrap;
+    .stack { display: grid; gap: 24px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+    /* --- Status Details --- */
+    .heading-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
     }
-    .pill.success{background:var(--success-bg); color:var(--success-text); border-color:#bbf7d0;}
-    .pill.warning{background:var(--warning-bg); color:var(--warning-text); border-color:#fde68a;}
-    .pill.info{background:var(--info-bg); color:var(--info-text); border-color:#bae6fd;}
-    .pill.neutral{background:var(--neutral-bg); color:var(--neutral-text); border-color:#cbd5e1;}
-    .summary{
-      background:var(--soft);
-      color:#334155;
-      border-radius:16px;
-      padding:12px 14px;
-      font-size:14px;
-      line-height:1.6;
-      max-width:460px;
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
-    .stats{
-      display:grid;
-      grid-template-columns:repeat(4, 1fr);
-      gap:12px;
+
+    .status-title {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 8px;
     }
-    .stat{
-      border:1px solid var(--line);
-      border-radius:20px;
-      padding:14px;
-      background:#fff;
-      min-height:90px;
+
+    .status-title h2 {
+      margin: 0;
+      font-size: clamp(28px, 3vw, 36px);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.02em;
     }
-    .stat .label{
-      color:var(--muted);
-      font-size:12px;
-      font-weight:700;
-      text-transform:uppercase;
-      letter-spacing:.06em;
-      margin-bottom:8px;
-      display:flex;
-      align-items:center;
-      gap:8px;
+
+    .summary {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--panel-border);
+      color: var(--text-muted);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 380px;
     }
-    .stat .value{
-      font-size:15px;
-      font-weight:700;
-      line-height:1.35;
-      word-break:break-word;
+
+    /* --- Stats Grid --- */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
     }
-    .two-col{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:20px;
+
+    .stat {
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
-    .details{
-      display:grid;
-      gap:10px;
-      margin-top:14px;
+
+    .stat .label {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
     }
-    .row{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:18px;
-      padding-bottom:10px;
-      border-bottom:1px solid #f1f5f9;
+
+    .stat .value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-main);
+      word-break: break-word;
     }
-    .row:last-child{border-bottom:0; padding-bottom:0}
-    .row span:first-child{color:var(--muted)}
-    .row span:last-child{
-      font-weight:700;
-      text-align:right;
-      word-break:break-word;
-      max-width:65%;
+
+    /* --- Details List --- */
+    .details {
+      display: grid;
+      gap: 8px;
+      margin-top: 16px;
+      background: rgba(15, 23, 42, 0.3);
+      border-radius: var(--radius);
+      padding: 16px;
+      border: 1px solid var(--panel-border);
     }
-    .muted-box{
-      border:1px dashed #cbd5e1;
-      background:white;
-      border-radius:24px;
-      padding:18px;
-      color:var(--muted);
-      box-shadow:var(--shadow);
-      font-size:14px;
-      line-height:1.6;
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+      font-size: 14px;
     }
-    .photo{
-      overflow:hidden;
-      border-radius:24px;
-      border:1px solid var(--line);
-      background:#fff;
-      box-shadow:var(--shadow);
+
+    .row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .row span:first-child { color: var(--text-muted); }
+    .row span:last-child {
+      font-weight: 600;
+      text-align: right;
+      color: var(--text-main);
     }
-    .photo img{
-      width:100%;
-      height:250px;
-      object-fit:cover;
-      display:block;
+    .row span.mono { color: var(--accent); }
+
+    /* --- Photos & Map --- */
+    .photo {
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      box-shadow: var(--shadow);
     }
-    .photo .caption{
-      padding:12px 14px;
-      font-size:13px;
-      color:var(--muted);
+
+    .photo img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      display: block;
     }
-    .notes ul{
-      margin:12px 0 0 18px;
-      padding:0;
-      color:#475569;
-      line-height:1.7;
-      font-size:14px;
+
+    .photo .caption {
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: rgba(15, 23, 42, 0.6);
+      border-top: 1px solid var(--panel-border);
     }
-    .gallery{
-      display:grid;
-      gap:10px;
-      margin-top:12px;
+
+    .muted-box {
+      border: 1px dashed rgba(100, 116, 139, 0.4);
+      background: rgba(15, 23, 42, 0.2);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      color: var(--text-muted);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
     }
-    .gallery .item{
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:18px;
-      padding:12px 14px;
-      box-shadow:var(--shadow);
+
+    #map {
+      height: 380px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      background: #0b1120;
+      margin-top: 16px;
     }
-    .gallery .item button{
-      all:unset;
-      cursor:pointer;
-      display:block;
-      width:100%;
+
+    /* Override Leaflet defaults for Dark Theme */
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: rgba(30, 41, 59, 0.95) !important;
+      color: #f8fafc !important;
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
     }
-    .gallery .title{
-      font-weight:700;
-      margin-bottom:4px;
-      color:#0f172a;
+    .leaflet-popup-content strong { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 14px;}
+    .leaflet-container a.leaflet-popup-close-button { color: var(--text-muted) !important; }
+
+    /* --- Interactive Lists (Nearby / Suggestions) --- */
+    .list, .gallery {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
     }
-    .gallery .meta{
-      font-size:13px;
-      color:var(--muted);
-      line-height:1.5;
+
+    .aircraft-item, .gallery-item {
+      border: 1px solid var(--panel-border);
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      transition: 0.2s all;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    #map{
-      height:360px;
-      border-radius:24px;
-      overflow:hidden;
-      border:1px solid var(--line);
-      box-shadow:var(--shadow);
-      background:#e2e8f0;
+
+    .aircraft-item:hover, .gallery-item:hover {
+      background: var(--panel-hover);
+      border-color: var(--accent);
+      transform: translateX(4px);
     }
-    .section-title{
-      margin:0;
-      font-size:20px;
-      letter-spacing:-.02em;
+
+    .aircraft-item .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .subtle{
-      color:var(--muted);
-      font-size:13px;
-      margin-top:6px;
-      line-height:1.5;
+
+    .aircraft-item .reg {
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      font-size: 15px;
     }
-    .list{
-      display:grid;
-      gap:10px;
-      margin-top:14px;
+
+    .aircraft-item .meta {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
     }
-    .aircraft-item{
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:18px;
-      padding:12px 14px;
-      box-shadow:var(--shadow);
-      cursor:pointer;
-      text-align:left;
-      width:100%;
+
+    .gallery-item .title {
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
     }
-    .aircraft-item:hover{background:#f8fafc}
-    .aircraft-item .top{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:flex-start;
-      margin-bottom:6px;
+    .gallery-item .meta {
+      font-size: 13px;
+      color: var(--text-muted);
     }
-    .aircraft-item .reg{
-      font-weight:800;
-      color:#0f172a;
+
+    /* --- Animations & Utilities --- */
+    .loading-dot {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      display: inline-block;
+      animation: spin 0.8s linear infinite;
     }
-    .aircraft-item .meta{
-      font-size:13px;
-      color:var(--muted);
-      line-height:1.5;
+
+    .loading-dot.dark {
+      border: 2px solid rgba(15,23,42,0.2);
+      border-top-color: #0b1120;
     }
-    .loading-dot{
-      width:14px;
-      height:14px;
-      border:2px solid rgba(255,255,255,.4);
-      border-top-color:#fff;
-      border-radius:50%;
-      display:inline-block;
-      animation:spin 1s linear infinite;
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Responsive --- */
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: 1fr; }
+      #map { height: 450px; }
+      .photo img { height: 300px; }
     }
-    .tiny-dot{
-      width:12px;
-      height:12px;
-      border:2px solid rgba(15,23,42,.2);
-      border-top-color:#0f172a;
-      border-radius:50%;
-      display:inline-block;
-      animation:spin 1s linear infinite;
+    @media (max-width: 768px) {
+      .two-col { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .controls { grid-template-columns: 1fr; }
     }
-    .icon{
-      width:16px;
-      height:16px;
-      display:inline-block;
-      vertical-align:middle;
-    }
-    .small-note{
-      margin-top:10px;
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.5;
-    }
-    @keyframes spin{to{transform:rotate(360deg)}}
-    @media (max-width: 1040px){
-      .grid, .two-col{grid-template-columns:1fr}
-      .controls{grid-template-columns:1fr}
-      .stats{grid-template-columns:repeat(2, 1fr)}
-    }
-    @media (max-width: 560px){
-      .wrap{padding:14px}
-      .hero,.card{padding:18px}
-      .stats{grid-template-columns:1fr}
-      input{font-size:16px}
-      button{width:100%}
-      .primary,.secondary{min-width:0}
-      #map{height:300px}
+    @media (max-width: 480px) {
+      .wrap { padding: 16px 12px 40px; }
+      .hero, .card { padding: 16px; }
+      .stats { grid-template-columns: 1fr; }
+      .status-title h2 { font-size: 24px; }
+      #map { height: 300px; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <section class="hero">
-      <div class="badge">New Zealand aircraft tracker</div>
-      <h1>Check a registration, see if it is flying, and view it on a map.</h1>
+      <div class="badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 4-4 4-3-1-2 2 5 5 2-2-1-3 4-4 4 6 1.2-.7c.4-.2.7-.6.6-1.1z"/></svg>
+        NZ Aircraft Tracker
+      </div>
+      <h1>Live Flight Radar & Registry</h1>
       <p class="lead">
-        This page uses ADSBDB for identity data and a live ADS-B feed for current position. It also asks for your location so it can show the nearest five live aircraft around you.
+        Search any registration to fetch static identity data (via ADSBDB) and real-time positioning (via ADS-B live feed). Allow location access to discover active aircraft around you.
       </p>
 
       <div class="controls">
         <div class="field">
-          <label for="reg">Registration</label>
+          <label for="reg">Aircraft Registration / Callsign</label>
           <div class="input-wrap">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="7"></circle>
               <path d="M20 20l-3.5-3.5"></path>
             </svg>
-            <input id="reg" value="ZK-ABC" placeholder="e.g. ZK-ABC" autocomplete="off" spellcheck="false" />
+            <input id="reg" value="ZK-OKQ" placeholder="e.g. ZK-OKQ" autocomplete="off" spellcheck="false" />
           </div>
         </div>
         <button id="searchBtn" class="primary"><span id="searchBtnText">Search</span></button>
-        <button id="locBtn" class="secondary"><span id="locBtnText">Use my location</span></button>
+        <button id="locBtn" class="secondary"><span id="locBtnText">Locate Me</span></button>
       </div>
 
       <div class="examples">
-        <button class="chip" data-reg="ZK-ABC">ZK-ABC</button>
-        <button class="chip" data-reg="ZK-IPB">ZK-IPB</button>
-        <button class="chip" data-reg="ZK-OKB">ZK-OKB</button>
-        <button class="chip" data-reg="N12345">N12345</button>
+        <span>Try:</span>
+        <button class="chip" data-reg="ZK-OKQ">ZK-OKQ</button>
+        <button class="chip" data-reg="ZK-NZD">ZK-NZD</button>
+        <button class="chip" data-reg="ZK-HLF">ZK-HLF</button>
       </div>
     </section>
 
@@ -493,113 +592,102 @@
         <section class="card">
           <div class="heading-row">
             <div>
-              <div class="eyebrow">Current status</div>
+              <div class="eyebrow">Current Status</div>
               <div class="status-title">
-                <h2 id="queryTitle">ZK-ABC</h2>
-                <span id="statusPill" class="pill neutral">Not seen live</span>
+                <h2 id="queryTitle">Waiting...</h2>
+                <span id="statusPill" class="pill neutral"><span class="pulse-dot" style="display:none;"></span>Standby</span>
               </div>
             </div>
             <div id="statusDetail" class="summary">
-              Enter a registration and press Search.
+              Enter a registration and press Search to begin tracking.
             </div>
           </div>
 
           <div class="stats">
-            <div class="stat"><div class="label">Aircraft type</div><div class="value" id="aircraftType">Unknown</div></div>
-            <div class="stat"><div class="label">Manufacturer</div><div class="value" id="manufacturer">Unknown</div></div>
-            <div class="stat"><div class="label">Current position</div><div class="value" id="coords">Unknown</div></div>
-            <div class="stat"><div class="label">Last seen</div><div class="value" id="lastSeen">Unknown</div></div>
+            <div class="stat"><div class="label">Type</div><div class="value" id="aircraftType">--</div></div>
+            <div class="stat"><div class="label">Manufacturer</div><div class="value" id="manufacturer">--</div></div>
+            <div class="stat"><div class="label">Coordinates</div><div class="value mono" id="coords">--</div></div>
+            <div class="stat"><div class="label">Last Seen</div><div class="value" id="lastSeen">--</div></div>
           </div>
         </section>
 
         <div class="two-col">
           <section class="card">
-            <h3 class="section-title">Aircraft details</h3>
+            <h3 class="section-title">Identity Details</h3>
+            <div class="subtle">Static metadata from ADSBDB.</div>
             <div class="details">
-              <div class="row"><span>Registration</span><span id="detailReg">Unknown</span></div>
-              <div class="row"><span>Mode S / ICAO hex</span><span id="modeS">Unknown</span></div>
-              <div class="row"><span>Owner</span><span id="owner">Unknown</span></div>
-              <div class="row"><span>Owner country</span><span id="ownerCountry">Unknown</span></div>
-              <div class="row"><span>Photo</span><span id="photoState">Not available</span></div>
+              <div class="row"><span>Registration</span><span class="mono" id="detailReg">--</span></div>
+              <div class="row"><span>Mode S Hex</span><span class="mono" id="modeS">--</span></div>
+              <div class="row"><span>Owner</span><span id="owner">--</span></div>
+              <div class="row"><span>Country</span><span id="ownerCountry">--</span></div>
+              <div class="row"><span>Photo</span><span id="photoState">--</span></div>
             </div>
           </section>
 
           <section class="card">
-            <h3 class="section-title">Live flight snapshot</h3>
+            <h3 class="section-title">Live Telemetry</h3>
+            <div class="subtle">Real-time data from ADS-B feed.</div>
             <div class="details">
-              <div class="row"><span>Callsign</span><span id="callsign">Unknown</span></div>
-              <div class="row"><span>Altitude</span><span id="altitude">Unknown</span></div>
-              <div class="row"><span>Speed</span><span id="speed">Unknown</span></div>
-              <div class="row"><span>Route</span><span id="route">Not shown</span></div>
-              <div class="row"><span>Source</span><span id="source">ADS-B live feed</span></div>
+              <div class="row"><span>Callsign</span><span class="mono" id="callsign">--</span></div>
+              <div class="row"><span>Altitude</span><span id="altitude">--</span></div>
+              <div class="row"><span>Speed</span><span id="speed">--</span></div>
+              <div class="row"><span>Route</span><span id="route">--</span></div>
+              <div class="row"><span>Source</span><span id="source">--</span></div>
             </div>
           </section>
         </div>
 
         <section class="card">
-          <div class="heading-row" style="margin-bottom:10px;">
+          <div class="heading-row" style="margin-bottom: 0;">
             <div>
-              <h3 class="section-title">New Zealand rarity and class</h3>
-              <div class="subtle">Heuristic based on the NZ register count for the model or type, plus whether the aircraft is usually active and whether it is visible right now.</div>
+              <h3 class="section-title">New Zealand Rarity Analysis</h3>
+              <div class="subtle">Heuristic estimation based on CAA register counts and active flight frequency.</div>
             </div>
           </div>
           <div class="details">
-            <div class="row"><span>Category</span><span id="nzCategory">Unknown</span></div>
-            <div class="row"><span>NZ aircraft count</span><span id="nzCount">Unknown</span></div>
-            <div class="row"><span>Fly frequency</span><span id="flyFrequency">Unknown</span></div>
-            <div class="row"><span>Rarity score</span><span id="rarityScore">Unknown</span></div>
-            <div class="row"><span>Rarity band</span><span id="rarityBand">Unknown</span></div>
+            <div class="row"><span>Category</span><span id="nzCategory">--</span></div>
+            <div class="row"><span>National Count</span><span id="nzCount">--</span></div>
+            <div class="row"><span>Flight Frequency</span><span id="flyFrequency">--</span></div>
+            <div class="row"><span>Rarity Score</span><span class="mono" id="rarityScore">--</span></div>
+            <div class="row"><span>Classification</span><span id="rarityBand" style="color:var(--accent);">--</span></div>
           </div>
-        </section>
-
-        <section class="card">
-          <div class="heading-row" style="margin-bottom:10px;">
-            <div>
-              <h3 class="section-title">Nearest 5 live aircraft</h3>
-              <div class="subtle" id="nearbyHint">Allow location to fill this panel and the map.</div>
-            </div>
-            <span id="nearbyStatus" class="pill neutral">Waiting for location</span>
-          </div>
-          <div id="nearbyList" class="list"></div>
         </section>
       </div>
 
       <aside class="stack">
-        <section class="card">
-          <h3 class="section-title">Plain-English summary</h3>
-          <p id="summaryText" style="margin:12px 0 0; color:#475569; line-height:1.7; font-size:14px;">
-            Enter a registration and press Search.
-          </p>
-        </section>
-
-        <section class="card">
-          <h3 class="section-title">Map</h3>
-          <div class="subtle">The searched aircraft and the nearest live aircraft are shown here when coordinates are available.</div>
-          <div id="map" style="margin-top:14px;"></div>
+        <section class="card" style="padding: 16px;">
+          <div style="padding: 0 8px;">
+            <h3 class="section-title">Radar Map</h3>
+            <div class="subtle">Target and proximity traffic view.</div>
+          </div>
+          <div id="map"></div>
         </section>
 
         <section id="photoCard" class="photo" style="display:none;">
           <img id="photoImg" alt="Aircraft photo">
-          <div class="caption">Photo from ADSBDB when available.</div>
+          <div class="caption">Image courtesy of ADSBDB</div>
         </section>
-
-        <section id="noPhotoCard" class="muted-box">
-          Aircraft photo is not available for this record.
+        <section id="noPhotoCard" class="muted-box" style="display:none;">
+          No photographic record available for this aircraft.
         </section>
 
         <section class="card">
-          <h3 class="section-title">If aircraft is not found</h3>
-          <div class="subtle">Try one of these registrations that currently have data, or use one from the nearest live list.</div>
-          <div id="suggestions" class="gallery"></div>
+          <div class="heading-row" style="margin-bottom: 12px;">
+            <div>
+              <h3 class="section-title">Nearby Live Traffic</h3>
+              <div class="subtle" id="nearbyHint">Enable location to scan airspace.</div>
+            </div>
+            <span id="nearbyStatus" class="pill neutral">Awaiting Loc</span>
+          </div>
+          <div id="nearbyList" class="list">
+            <div class="muted-box">Location required to detect proximal aircraft.</div>
+          </div>
         </section>
 
-        <section class="card notes">
-          <h3 class="section-title">Notes</h3>
-          <ul>
-            <li>Live ADS-B data can lag or disappear when coverage is poor.</li>
-            <li>Some registrations return metadata even when the aircraft is not visible live.</li>
-            <li>The NZ rarity score is only a quick heuristic, not a formal fleet statistic.</li>
-          </ul>
+        <section class="card" id="suggestionsCard" style="display: none;">
+          <h3 class="section-title">Active Examples</h3>
+          <div class="subtle">Try these registrations with active or rich data.</div>
+          <div id="suggestions" class="gallery"></div>
         </section>
       </aside>
     </div>
@@ -607,20 +695,17 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
-    const ADSBDB_BASES = [
-      "https://api.adsbdb.com/v1",
-      "https://api.adsbdb.com/v0"
-    ];
+    const ADSBDB_BASES = ["https://api.adsbdb.com/v1", "https://api.adsbdb.com/v0"];
     const ADSBLOL_BASE = "https://api.adsb.lol";
     const NZ_REGISTER_CSV_URL = "https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv";
-    const NEARBY_RADIUS_NM = 75;
-    const FALLBACK_REGS = ["ZK-IPB", "ZK-OKB", "ZK-HQO", "ZK-TWT", "ZK-XYZ", "ZK-TEB"];
+    const NEARBY_RADIUS_NM = 150;
+    const FALLBACK_REGS = ["ZK-OKQ", "ZK-NZD", "ZK-HLF", "ZK-TWT", "ZK-IPB", "ZK-OKB"];
 
     const el = (id) => document.getElementById(id);
     const state = {
       loading: false,
       controller: null,
-      query: "ZK-ABC",
+      query: "",
       staticData: null,
       liveData: null,
       user: null,
@@ -655,8 +740,8 @@
       state.loading = loading;
       el("searchBtn").disabled = loading;
       el("locBtn").disabled = loading;
-      el("searchBtnText").innerHTML = loading ? '<span class="loading-dot"></span> Searching' : 'Search';
-      el("locBtnText").innerHTML = loading ? '<span class="loading-dot"></span> Locating' : 'Use my location';
+      el("searchBtnText").innerHTML = loading ? '<span class="loading-dot dark"></span>' : 'Search';
+      el("locBtnText").innerHTML = loading ? '<span class="loading-dot"></span>' : 'Locate Me';
       el("reg").disabled = loading;
     }
 
@@ -679,12 +764,8 @@
       return 2 * R * Math.asin(Math.sqrt(x));
     }
 
-    function nmFromKm(km) {
-      return km / 1.852;
-    }
-
     function formatTimeAgo(value) {
-      if (value === null || value === undefined || value === "") return "Unknown";
+      if (value === null || value === undefined || value === "") return "--";
       const n = Number(value);
       if (Number.isNaN(n)) return String(value);
       if (n < 60) return `${Math.round(n)}s ago`;
@@ -694,22 +775,22 @@
 
     function prettyAltitude(ac) {
       const alt = ac?.alt_baro ?? ac?.altitude ?? ac?.alt ?? ac?.baro_altitude;
-      if (alt === undefined || alt === null || alt === "") return "Unknown";
-      if (String(alt).toLowerCase() === "ground") return "On ground";
+      if (alt === undefined || alt === null || alt === "") return "--";
+      if (String(alt).toLowerCase() === "ground") return "On Ground";
       const n = Number(alt);
       return Number.isNaN(n) ? String(alt) : `${n.toLocaleString()} ft`;
     }
 
     function prettySpeed(ac) {
       const speed = pickNumber(ac?.gs, ac?.speed, ac?.ground_speed, ac?.velocity);
-      if (speed === null) return "Unknown";
+      if (speed === null) return "--";
       return `${Math.round(speed).toLocaleString()} kt`;
     }
 
     function prettyCoordinates(ac) {
       const lat = pickNumber(ac?.lat, ac?.latitude);
       const lon = pickNumber(ac?.lon, ac?.longitude);
-      if (lat === null || lon === null) return "Unknown";
+      if (lat === null || lon === null) return "--";
       return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     }
 
@@ -718,33 +799,27 @@
     }
 
     function extractLiveAircraft(payload) {
-      const candidate = payload?.response ?? payload;
-      if (Array.isArray(candidate)) return candidate[0] || null;
-      if (candidate && typeof candidate === "object") return candidate;
+      if (!payload) return null;
+      if (payload.ac && Array.isArray(payload.ac)) return payload.ac[0] || null;
+      if (payload.aircraft && Array.isArray(payload.aircraft)) return payload.aircraft[0] || null;
       return null;
     }
 
     function extractNearbyAircraft(payload) {
-      const candidate = payload?.response ?? payload?.aircraft ?? payload;
-      if (Array.isArray(candidate)) return candidate;
-      if (candidate && Array.isArray(candidate.ac)) return candidate.ac;
-      if (candidate && Array.isArray(candidate.aircraft)) return candidate.aircraft;
-      if (candidate && typeof candidate === "object") {
-        const keys = Object.keys(candidate);
-        for (const key of ["ac", "aircraft", "states", "results", "data"]) {
-          if (Array.isArray(candidate[key])) return candidate[key];
-        }
-      }
+      if (!payload) return [];
+      if (payload.ac && Array.isArray(payload.ac)) return payload.ac;
+      if (payload.aircraft && Array.isArray(payload.aircraft)) return payload.aircraft;
       return [];
     }
 
     function getLiveStatus(ac) {
       if (!ac) {
         return {
-          label: "Not seen live",
+          label: "Offline / Unseen",
           tone: "neutral",
-          detail: "No live ADS-B hit for this registration right now.",
-          airborne: false
+          detail: "No real-time ADS-B telemetry available for this registration.",
+          airborne: false,
+          pulse: false
         };
       }
 
@@ -755,301 +830,181 @@
 
       if (lat === null || lon === null) {
         return {
-          label: onGround ? "On the ground" : "Live feed found",
+          label: onGround ? "Grounded (No Pos)" : "Active (No Pos)",
           tone: onGround ? "warning" : "info",
-          detail: onGround ? "The feed can see the aircraft, but it is reporting it as on the ground." : "The aircraft is in the feed, but position data is incomplete.",
-          airborne: !onGround
+          detail: "Aircraft is transmitting, but positional telemetry is incomplete.",
+          airborne: !onGround,
+          pulse: true
         };
       }
 
       if (onGround) {
         return {
-          label: "On the ground",
+          label: "On Ground",
           tone: "warning",
-          detail: "The live feed currently shows this aircraft on the ground.",
-          airborne: false
+          detail: "Telemetry confirms aircraft is on the ground.",
+          airborne: false,
+          pulse: true
         };
       }
 
       return {
-        label: "Flying now",
+        label: "Airborne Live",
         tone: "success",
-        detail: `The live feed shows a position at ${lat.toFixed(4)}, ${lon.toFixed(4)}.`,
-        airborne: true
+        detail: `Transmitting live positional telemetry at ${lat.toFixed(4)}, ${lon.toFixed(4)}.`,
+        airborne: true,
+        pulse: true
       };
     }
 
     function classifyAircraft(staticData, liveData) {
-      const owner = String(staticData?.registered_owner || staticData?.owner_name || staticData?.owner || "").toLowerCase();
+      const owner = String(staticData?.registered_owner || "").toLowerCase();
       const model = String(staticData?.model || staticData?.icao_type || staticData?.type || "").toLowerCase();
-      const category = String(staticData?.category || staticData?.classification || staticData?.model_category || "").toLowerCase();
+      const category = String(staticData?.category || staticData?.classification || "").toLowerCase();
       const full = `${owner} ${model} ${category}`;
 
-      if (/(royal new zealand air force|rnzaf|new zealand defence force|nzdf|defence force|military)/i.test(full)) return { label: "Military", tempo: 0.55 };
+      if (/(royal new zealand air force|rnzaf|defence force|military)/i.test(full)) return { label: "Military", tempo: 0.55 };
       if (/(police|pirihimana)/i.test(full)) return { label: "Police", tempo: 0.75 };
-      if (/(air new zealand|sounds air|air chathams|originair|barrier air|air kaimanawa|air2there|airwork|mount cook|pacific air|air safaris|great barrier airlines)/i.test(full)) return { label: "Airline", tempo: 0.95 };
-      if (/(rescue|air ambulance|ambulance|helicopter trust|coastguard|fire service|search and rescue|hems|medical)/i.test(full)) return { label: "Other commercial", tempo: 0.8 };
-      if (/(charter|training|flight school|aerohire|sightseeing|tour|scenic|survey|agric|agricultural|spray|freight|cargo|logistics|transport|services|limited|ltd|company|trust)/i.test(full)) return { label: "Other commercial", tempo: 0.7 };
-      if (/(amateur built|microlight|glider|balloon|gyroplane|power glider|private|club|aero club)/i.test(full)) return { label: "General aviation", tempo: 0.3 };
+      if (/(air new zealand|sounds air|air chathams|airwork|mount cook)/i.test(full)) return { label: "Airline", tempo: 0.95 };
+      if (/(rescue|ambulance|coastguard|fire|search)/i.test(full)) return { label: "Emergency / Medevac", tempo: 0.8 };
+      if (/(charter|training|school|scenic|survey|agric|freight)/i.test(full)) return { label: "Commercial", tempo: 0.7 };
+      if (/(amateur|microlight|glider|balloon|gyro|private|club)/i.test(full)) return { label: "General Aviation", tempo: 0.3 };
 
-      const onGroundRaw = liveData?.on_ground ?? liveData?.ground ?? liveData?.gnd ?? liveData?.isOnGround;
-      const onGround = onGroundRaw === true || String(onGroundRaw).toLowerCase() === "true" || String(liveData?.alt_baro ?? liveData?.altitude ?? liveData?.alt).toLowerCase() === "ground";
-      const isLargeAircraft = /(airbus|boeing|embraer|atr|dash 8|q300|q400|fokker|saab|a320|a321|a319|737|747|757|767|777|787|a220|a330|a350)/i.test(model);
-
-      if (isLargeAircraft && !onGround) return { label: "Airline", tempo: 0.9 };
-      if (isLargeAircraft) return { label: "Other commercial", tempo: 0.85 };
-      if (/^(aeroplane|airplane|helicopter|amateur built aeroplane|microlight class|glider|balloon|gyroplane)/i.test(category)) return { label: "General aviation", tempo: 0.4 };
-      return { label: "Other / unknown", tempo: 0.55 };
-    }
-
-    function rarityBand(score) {
-      if (score >= 75) return "Very rare";
-      if (score >= 50) return "Rare";
-      if (score >= 25) return "Uncommon";
-      return "Common";
-    }
-
-    function csvParse(text) {
-      const rows = [];
-      let row = [];
-      let field = "";
-      let inQuotes = false;
-
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        const next = text[i + 1];
-
-        if (inQuotes) {
-          if (ch === '"') {
-            if (next === '"') {
-              field += '"';
-              i++;
-            } else {
-              inQuotes = false;
-            }
-          } else {
-            field += ch;
-          }
-          continue;
-        }
-
-        if (ch === '"') inQuotes = true;
-        else if (ch === ',') { row.push(field); field = ""; }
-        else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
-        else if (ch === '\r') continue;
-        else field += ch;
-      }
-
-      if (field.length || row.length) {
-        row.push(field);
-        rows.push(row);
-      }
-      return rows.filter(r => r.some(c => String(c || "").trim() !== ""));
-    }
-
-    function mapCsvRows(text) {
-      const rows = csvParse(text);
-      if (rows.length < 2) return { headers: [], data: [] };
-      const headers = rows[0].map(h => String(h || "").trim());
-      const data = rows.slice(1).map(r => {
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = r[i] ?? "");
-        return obj;
-      });
-      return { headers, data };
-    }
-
-    function findField(row, candidates) {
-      const entries = Object.entries(row);
-      for (const candidate of candidates) {
-        const wanted = normalizeKey(candidate);
-        for (const [key, value] of entries) {
-          if (normalizeKey(key) === wanted) return value;
-        }
-      }
-      for (const candidate of candidates) {
-        const wanted = normalizeKey(candidate);
-        for (const [key, value] of entries) {
-          const k = normalizeKey(key);
-          if (k.includes(wanted) || wanted.includes(k)) return value;
-        }
-      }
-      return "";
+      const isLarge = /(airbus|boeing|embraer|atr|dash 8|q300|a320|737|777|787)/i.test(model);
+      if (isLarge) return { label: "Commercial Jet/Turboprop", tempo: 0.9 };
+      if (/aeroplane|helicopter/i.test(category)) return { label: "General Aviation", tempo: 0.4 };
+      return { label: "Unknown Classification", tempo: 0.5 };
     }
 
     async function loadNzRegister() {
       if (state.nzRows) return state.nzRows;
       try {
-        const response = await fetch(NZ_REGISTER_CSV_URL, { mode: "cors" });
-        if (!response.ok) throw new Error(`CAA register fetch failed (${response.status})`);
-        const text = await response.text();
-        const parsed = mapCsvRows(text);
-        state.nzRows = parsed.data;
+        const res = await fetch(NZ_REGISTER_CSV_URL, { mode: "cors" });
+        if (!res.ok) throw new Error();
+        const text = await res.text();
+        const rows = text.split('\n').map(r => r.split(',').map(c => c.replace(/"/g, '').trim()));
+        const headers = rows[0];
+        state.nzRows = rows.slice(1).map(r => {
+          let obj = {};
+          headers.forEach((h, i) => obj[h.toLowerCase()] = r[i] || "");
+          return obj;
+        });
         return state.nzRows;
       } catch {
-        state.nzRows = [];
-        return [];
+        state.nzRows = []; return [];
       }
     }
 
     async function lookupNzStats(staticData, liveData) {
       const rows = await loadNzRegister();
-      const classification = classifyAircraft(staticData, liveData);
-      const modelKey = normalizeKey(staticData?.model || staticData?.icao_type || staticData?.type || "");
-      const categoryKey = normalizeKey(staticData?.category || staticData?.classification || staticData?.model_category || "");
-
-      if (!rows.length) {
-        return {
-          count: null,
-          category: classification.label,
-          frequencyLabel: classification.tempo >= 0.9 ? "Frequent" : classification.tempo >= 0.7 ? "Regular" : classification.tempo >= 0.45 ? "Variable" : "Infrequent",
-          rarityScore: null,
-          rarityBand: "Unknown"
-        };
+      const c = classifyAircraft(staticData, liveData);
+      const model = normalizeKey(staticData?.model || staticData?.icao_type);
+      
+      let count = 0;
+      if (model && rows.length) {
+        count = rows.filter(r => normalizeKey(r['model'] || r['aircraft model']).includes(model)).length;
       }
 
-      const modelCount = modelKey ? rows.filter(row => normalizeKey(findField(row, ["Model", "Aircraft Model"])) === modelKey).length : 0;
-      const categoryCount = categoryKey ? rows.filter(row => normalizeKey(findField(row, ["Model Category", "Category", "Classification"])) === categoryKey).length : 0;
-      const count = modelCount || categoryCount || null;
       const countFactor = count ? Math.min(Math.log10(count + 1) / 2.8, 1) : 0.5;
-      const tempoFactor = Math.min(Math.max(classification.tempo, 0.1), 1);
+      const tempoFactor = Math.min(Math.max(c.tempo, 0.1), 1);
       let rarityScore = Math.round((0.75 * (1 - countFactor) + 0.25 * (1 - tempoFactor)) * 100);
 
-      if (liveData && getLiveStatus(liveData).airborne) rarityScore = Math.max(0, rarityScore - 5);
+      let band = rarityScore >= 75 ? "Very Rare" : rarityScore >= 50 ? "Rare" : rarityScore >= 25 ? "Uncommon" : "Common";
 
       return {
-        count,
-        category: classification.label,
-        frequencyLabel: classification.tempo >= 0.9 ? "Frequent" : classification.tempo >= 0.7 ? "Regular" : classification.tempo >= 0.45 ? "Variable" : "Infrequent",
-        rarityScore,
-        rarityBand: rarityBand(rarityScore)
+        count: count || null,
+        category: c.label,
+        freq: c.tempo >= 0.9 ? "Frequent" : c.tempo >= 0.7 ? "Regular" : c.tempo >= 0.45 ? "Variable" : "Infrequent",
+        score: count ? rarityScore : null,
+        band: count ? band : "--"
       };
     }
 
-    function setRow(id, value) {
-      el(id).textContent = value;
-    }
-
-    function setPill(tone, label) {
-      const pill = el("statusPill");
-      pill.className = `pill ${tone}`;
-      pill.textContent = label;
-    }
+    function setRow(id, value) { el(id).textContent = value || "--"; }
 
     function renderBase() {
       const staticData = state.staticData;
       const liveData = state.liveData;
       const status = getLiveStatus(liveData);
-      const classification = classifyAircraft(staticData, liveData);
 
-      setRow("queryTitle", state.query || "No query yet");
-      setPill(status.tone, status.label);
-      setRow("statusDetail", status.detail);
+      el("queryTitle").textContent = state.query || "Waiting...";
+      
+      const pill = el("statusPill");
+      pill.className = `pill ${status.tone}`;
+      pill.innerHTML = `${status.pulse ? '<span class="pulse-dot"></span>' : ''}${status.label}`;
+      
+      el("statusDetail").textContent = status.detail;
 
-      setRow("aircraftType", staticData?.icao_type || staticData?.type || "Unknown");
-      setRow("manufacturer", staticData?.manufacturer || "Unknown");
+      setRow("aircraftType", staticData?.icao_type || staticData?.type);
+      setRow("manufacturer", staticData?.manufacturer);
       setRow("coords", prettyCoordinates(liveData));
-      setRow("lastSeen", formatTimeAgo(liveData?.seen ?? liveData?.seen_pos ?? liveData?.seen_pos_sec ?? liveData?.age));
-      setRow("detailReg", staticData?.registration || state.query || "Unknown");
-      setRow("modeS", staticData?.mode_s || "Unknown");
-      setRow("owner", staticData?.registered_owner || "Unknown");
-      setRow("ownerCountry", staticData?.registered_owner_country_name || staticData?.registered_owner_country_iso_name || "Unknown");
-      setRow("photoState", staticData?.url_photo || staticData?.url_photo_thumbnail ? "Available" : "Not available");
-      setRow("callsign", liveData?.flight || liveData?.callsign || liveData?.ident || liveData?.cs || "Unknown");
-      setRow("altitude", prettyAltitude(liveData));
-      setRow("speed", prettySpeed(liveData));
-      setRow("route", liveData?.r || liveData?.route || liveData?.from || "Not shown");
-      setRow("source", liveData?.src || liveData?.source || "ADS-B live feed");
-      setRow("nzCategory", classification.label);
-      setRow("flyFrequency", classification.tempo >= 0.9 ? "Frequent" : classification.tempo >= 0.7 ? "Regular" : classification.tempo >= 0.45 ? "Variable" : "Infrequent");
-
+      setRow("lastSeen", formatTimeAgo(liveData?.seen ?? liveData?.seen_pos));
+      
+      setRow("detailReg", staticData?.registration || state.query);
+      setRow("modeS", staticData?.mode_s || liveData?.hex);
+      setRow("owner", staticData?.registered_owner);
+      setRow("ownerCountry", staticData?.registered_owner_country_name);
+      
       const photoUrl = staticData?.url_photo || staticData?.url_photo_thumbnail;
-      const photoCard = el("photoCard");
-      const noPhotoCard = el("noPhotoCard");
+      setRow("photoState", photoUrl ? "Available" : "Not Available");
       if (photoUrl) {
         el("photoImg").src = photoUrl;
-        photoCard.style.display = "block";
-        noPhotoCard.style.display = "none";
-      } else {
-        photoCard.style.display = "none";
-        noPhotoCard.style.display = "block";
+        el("photoCard").style.display = "block";
+        el("noPhotoCard").style.display = "none";
+      } else if (state.query) {
+        el("photoCard").style.display = "none";
+        el("noPhotoCard").style.display = "block";
       }
 
-      if (state.loading) {
-        el("summaryText").textContent = "Looking up the aircraft...";
-      } else if (liveData) {
-        el("summaryText").textContent = "This aircraft is visible in the live feed. The page shows its latest known position, a map marker, and simple identity details from ADSBDB.";
-      } else if (staticData) {
-        el("summaryText").textContent = "The aircraft record was found, but there is no live position right now. That usually means coverage is poor, the aircraft is offline, or the feed is not seeing it at the moment.";
-      } else {
-        el("summaryText").textContent = "Enter a registration and press Search.";
-      }
+      setRow("callsign", liveData?.flight || liveData?.callsign);
+      setRow("altitude", prettyAltitude(liveData));
+      setRow("speed", prettySpeed(liveData));
+      setRow("route", liveData?.r || liveData?.route);
+      setRow("source", liveData ? (liveData.src || "ADS-B Network") : null);
     }
 
     async function renderRarity() {
+      if (!state.query) return;
       const stats = await lookupNzStats(state.staticData || {}, state.liveData || null);
-      setRow("nzCount", stats.count === null ? "Unavailable" : `${stats.count.toLocaleString()} aircraft`);
-      setRow("rarityScore", stats.rarityScore === null ? "Unavailable" : `${stats.rarityScore}/100`);
-      setRow("rarityBand", stats.rarityBand);
-      setRow("flyFrequency", stats.frequencyLabel);
       setRow("nzCategory", stats.category);
+      setRow("nzCount", stats.count ? `${stats.count.toLocaleString()} registered` : '--');
+      setRow("flyFrequency", stats.freq);
+      setRow("rarityScore", stats.score ? `${stats.score}/100` : '--');
+      setRow("rarityBand", stats.band);
     }
 
     async function fetchJson(url, signal) {
       const response = await fetch(url, { signal, mode: "cors" });
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`${response.status} ${response.statusText}${text ? ": " + text : ""}`);
-      }
+      if (!response.ok) throw new Error(`${response.status}`);
       return response.json();
     }
 
     async function fetchFirstWorking(urls, signal) {
-      let lastError = null;
+      let lastErr;
       for (const url of urls) {
-        try {
-          return await fetchJson(url, signal);
-        } catch (error) {
-          lastError = error;
-        }
+        try { return await fetchJson(url, signal); } catch (e) { lastErr = e; }
       }
-      throw lastError || new Error("Request failed");
-    }
-
-    function buildNearbyUrl(lat, lon, radiusNm) {
-      return `${ADSBLOL_BASE}/v2/point/${lat}/${lon}/${radiusNm}`;
+      throw lastErr;
     }
 
     async function loadNearby(lat, lon) {
-      const url = buildNearbyUrl(lat, lon, NEARBY_RADIUS_NM);
+      const url = `${ADSBLOL_BASE}/v2/point/${lat}/${lon}/${NEARBY_RADIUS_NM}`;
       const payload = await fetchJson(url, state.controller?.signal);
       const raw = extractNearbyAircraft(payload);
 
-      const list = raw
-        .map((ac) => {
-          const alat = pickNumber(ac.lat, ac.latitude);
-          const alon = pickNumber(ac.lon, ac.longitude);
-          if (alat === null || alon === null) return null;
-          const distKm = haversineKm(lat, lon, alat, alon);
-          return {
-            raw: ac,
-            lat: alat,
-            lon: alon,
-            distKm,
-            distNm: nmFromKm(distKm),
-            reg: normalizeRegistration(ac.r || ac.reg || ac.registration || ac.tail || ac.callsign || ac.flight || ""),
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.distKm - b.distKm)
-        .slice(0, 5);
+      const list = raw.map((ac) => {
+        const alat = pickNumber(ac.lat, ac.latitude);
+        const alon = pickNumber(ac.lon, ac.longitude);
+        if (alat === null || alon === null) return null;
+        const distKm = haversineKm(lat, lon, alat, alon);
+        return {
+          raw: ac, lat: alat, lon: alon, distKm, distNm: distKm / 1.852,
+          reg: normalizeRegistration(ac.r || ac.reg || ac.flight || ac.hex || "")
+        };
+      }).filter(Boolean).sort((a, b) => a.distKm - b.distKm).slice(0, 6);
 
       state.nearby = list;
       return list;
-    }
-
-    function getAircraftLabel(ac) {
-      return ac.reg || ac.raw?.flight || ac.raw?.callsign || ac.raw?.ident || ac.raw?.hex || "Unknown";
     }
 
     function renderNearbyList() {
@@ -1057,309 +1012,163 @@
       list.innerHTML = "";
       if (!state.user) {
         el("nearbyStatus").className = "pill neutral";
-        el("nearbyStatus").textContent = "Waiting for location";
-        el("nearbyHint").textContent = "Allow location to fill this panel and the map.";
-        list.innerHTML = '<div class="muted-box">No location yet. Click “Use my location” or allow the prompt to see the nearest five aircraft.</div>';
+        el("nearbyStatus").textContent = "Awaiting Loc";
         return;
       }
-
       if (!state.nearby.length) {
         el("nearbyStatus").className = "pill warning";
-        el("nearbyStatus").textContent = "No live traffic";
-        el("nearbyHint").textContent = "No aircraft were returned inside the chosen radius.";
-        list.innerHTML = '<div class="muted-box">No aircraft found near your location right now.</div>';
+        el("nearbyStatus").textContent = "Clear Airspace";
+        list.innerHTML = '<div class="muted-box">No active transponders detected within range.</div>';
         return;
       }
 
       el("nearbyStatus").className = "pill success";
-      el("nearbyStatus").textContent = `${state.nearby.length} live aircraft`;
-      el("nearbyHint").textContent = `Sorted by distance from ${state.user.lat.toFixed(4)}, ${state.user.lon.toFixed(4)}.`;
+      el("nearbyStatus").innerHTML = `<span class="pulse-dot"></span>${state.nearby.length} Targets`;
 
-      for (const item of state.nearby) {
+      state.nearby.forEach(item => {
         const ac = item.raw;
-        const button = document.createElement("button");
-        button.className = "aircraft-item";
-        const label = getAircraftLabel(item);
-        button.innerHTML = `
+        const btn = document.createElement("button");
+        btn.className = "aircraft-item";
+        const tone = getLiveStatus(ac).tone;
+        btn.innerHTML = `
           <div class="top">
-            <div class="reg">${label}</div>
-            <div class="pill ${getLiveStatus(ac).tone}">${item.distNm.toFixed(1)} NM</div>
+            <div class="reg">${item.reg}</div>
+            <div class="pill ${tone}">${item.distNm.toFixed(1)} NM</div>
           </div>
           <div class="meta">
-            ${ac.model || ac.type || ac.icao_type || "Unknown type"} · ${prettyAltitude(ac)} · ${prettySpeed(ac)}
-            <br>
-            ${prettyCoordinates(ac)}
+            ${ac.type || ac.icao_type || "Unknown Type"} · ${prettyAltitude(ac)} · ${prettySpeed(ac)}
           </div>
         `;
-        button.addEventListener("click", () => {
-          const reg = item.reg || label;
-          el("reg").value = reg;
-          runSearch(reg);
-        });
-        list.appendChild(button);
-      }
+        btn.onclick = () => { el("reg").value = item.reg; runSearch(item.reg); };
+        list.appendChild(btn);
+      });
     }
 
     function ensureMap() {
-      if (state.map) return state.map;
-      state.map = L.map("map", { zoomControl: true }).setView([-41.0, 174.0], 5);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      if (state.map) return;
+      state.map = L.map("map", { zoomControl: true, attributionControl: false }).setView([-41.0, 174.0], 5);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        subdomains: 'abcd'
       }).addTo(state.map);
-      return state.map;
-    }
-
-    function clearMarkers() {
-      for (const marker of state.markers) {
-        try { state.map.removeLayer(marker); } catch {}
-      }
-      state.markers = [];
     }
 
     function renderMap() {
       ensureMap();
-      clearMarkers();
-
+      state.markers.forEach(m => state.map.removeLayer(m));
+      state.markers = [];
       const points = [];
 
       if (state.user) {
-        const userMarker = L.circleMarker([state.user.lat, state.user.lon], {
-          radius: 8,
-          color: "#0f172a",
-          fillColor: "#0f172a",
-          fillOpacity: 1,
-          weight: 2
-        }).addTo(state.map);
-        userMarker.bindPopup("You are here");
-        state.markers.push(userMarker);
+        const uMarker = L.circleMarker([state.user.lat, state.user.lon], {
+          radius: 7, color: "#38bdf8", fillColor: "#0b1120", weight: 3, fillOpacity: 1
+        }).addTo(state.map).bindPopup("<strong>Observer Location</strong>");
+        state.markers.push(uMarker);
         points.push([state.user.lat, state.user.lon]);
       }
+
+      state.nearby.forEach(item => {
+        const marker = L.circleMarker([item.lat, item.lon], {
+          radius: 5, color: "#10b981", fillColor: "#10b981", weight: 1, fillOpacity: 0.8
+        }).addTo(state.map).bindPopup(`<strong>${item.reg}</strong><br>${prettyAltitude(item.raw)}<br>${prettySpeed(item.raw)}`);
+        state.markers.push(marker);
+        points.push([item.lat, item.lon]);
+      });
 
       if (state.liveData) {
         const lat = pickNumber(state.liveData.lat, state.liveData.latitude);
         const lon = pickNumber(state.liveData.lon, state.liveData.longitude);
         if (lat !== null && lon !== null) {
-          const reg = state.staticData?.registration || state.query || getAircraftLabel(state.liveData);
-          const marker = L.marker([lat, lon]).addTo(state.map);
-          marker.bindPopup(`<strong>${reg}</strong><br>${prettyAltitude(state.liveData)}<br>${prettySpeed(state.liveData)}`);
-          state.markers.push(marker);
+          const m = L.circleMarker([lat, lon], {
+            radius: 8, color: "#f59e0b", fillColor: "#f59e0b", weight: 2, fillOpacity: 1
+          }).addTo(state.map).bindPopup(`<strong>TARGET: ${state.query}</strong><br>${prettyAltitude(state.liveData)}<br>${prettySpeed(state.liveData)}`);
+          state.markers.push(m);
           points.push([lat, lon]);
         }
       }
 
-      for (const item of state.nearby) {
-        const { lat, lon, raw } = item;
-        const reg = getAircraftLabel(item);
-        const marker = L.circleMarker([lat, lon], {
-          radius: 6,
-          color: "#2563eb",
-          fillColor: "#3b82f6",
-          fillOpacity: 0.9,
-          weight: 2
-        }).addTo(state.map);
-        marker.bindPopup(`<strong>${reg}</strong><br>${prettyAltitude(raw)}<br>${prettySpeed(raw)}`);
-        state.markers.push(marker);
-        points.push([lat, lon]);
-      }
-
-      if (points.length >= 1) {
-        const bounds = L.latLngBounds(points);
-        state.map.fitBounds(bounds.pad(0.2));
-      } else {
-        state.map.setView([-41.0, 174.0], 5);
-      }
-
-      setTimeout(() => state.map.invalidateSize(), 150);
-    }
-
-    function renderSuggestions(items) {
-      const box = el("suggestions");
-      box.innerHTML = "";
-      if (!items.length) {
-        box.innerHTML = '<div class="muted-box">No suggestions available yet.</div>';
-        return;
-      }
-
-      for (const item of items) {
-        const div = document.createElement("div");
-        div.className = "item";
-        div.innerHTML = `
-          <button type="button">
-            <div class="title">${item.reg}</div>
-            <div class="meta">${item.label}</div>
-          </button>
-        `;
-        div.querySelector("button").addEventListener("click", () => {
-          el("reg").value = item.reg;
-          runSearch(item.reg);
-        });
-        box.appendChild(div);
-      }
+      if (points.length) state.map.fitBounds(L.latLngBounds(points).pad(0.15));
+      setTimeout(() => state.map.invalidateSize(), 200);
     }
 
     async function buildSuggestions() {
       if (state.suggestionsReady) return;
       state.suggestionsReady = true;
-      const results = [];
-      for (const reg of FALLBACK_REGS) {
-        try {
-          const [staticPayload, livePayload] = await Promise.all([
-            fetchFirstWorking(ADSBDB_BASES.map(base => `${base}/aircraft/${encodeURIComponent(reg)}`), null).catch(() => null),
-            fetchJson(`${ADSBLOL_BASE}/v2/registration/${encodeURIComponent(reg)}`, null).catch(() => null)
-          ]);
-          const staticData = extractAircraftDetails(staticPayload);
-          const liveData = extractLiveAircraft(livePayload);
-          if (staticData || liveData) {
-            results.push({
-              reg,
-              label: `${staticData?.icao_type || staticData?.type || "Aircraft"}${liveData ? " · live data available" : " · metadata available"}`
-            });
-          }
-        } catch {}
-        if (results.length >= 4) break;
-      }
-      if (!results.length) {
-        results.push(
-          { reg: "ZK-IPB", label: "NZ Police helicopter example" },
-          { reg: "ZK-OKB", label: "Air New Zealand example" },
-          { reg: "ZK-TWT", label: "General aviation example" }
-        );
-      }
-      renderSuggestions(results.slice(0, 4));
+      el("suggestionsCard").style.display = "block";
+      const box = el("suggestions");
+      
+      const results = FALLBACK_REGS.slice(0, 4).map(reg => ({
+        reg, label: "Example Target Data"
+      }));
+
+      box.innerHTML = "";
+      results.forEach(item => {
+        const div = document.createElement("button");
+        div.className = "gallery-item";
+        div.innerHTML = `<div class="title">${item.reg}</div><div class="meta">${item.label}</div>`;
+        div.onclick = () => { el("reg").value = item.reg; runSearch(item.reg); };
+        box.appendChild(div);
+      });
     }
 
-    async function locateUser(auto = false) {
-      if (!navigator.geolocation) {
-        setError("Geolocation is not available in this browser.");
-        return;
-      }
-      setError("");
+    async function locateUser() {
+      if (!navigator.geolocation) return setError("Geolocation unavailable.");
       el("nearbyStatus").className = "pill info";
-      el("nearbyStatus").textContent = "Locating";
-      el("nearbyHint").textContent = auto ? "Trying to get your position for nearby aircraft." : "Getting your position for nearby aircraft.";
-
-      return new Promise((resolve) => {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-          state.user = {
-            lat: pos.coords.latitude,
-            lon: pos.coords.longitude
-          };
-          try {
-            setBusy(true);
-            state.nearby = await loadNearby(state.user.lat, state.user.lon);
-            renderNearbyList();
-            renderMap();
-            resolve(true);
-          } catch (error) {
-            state.nearby = [];
-            state.nearbyError = error?.message || String(error);
-            setError("Could not load nearby aircraft: " + state.nearbyError);
-            renderNearbyList();
-            renderMap();
-            resolve(false);
-          } finally {
-            setBusy(false);
-          }
-        }, (err) => {
-          state.user = null;
-          state.nearby = [];
-          setError("Location was not granted. You can still search registrations, but the nearby aircraft list and map will be limited.");
-          renderNearbyList();
-          renderMap();
-          resolve(false);
-        }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-      });
+      el("nearbyStatus").innerHTML = '<span class="pulse-dot"></span>Scanning';
+      
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        state.user = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        try {
+          setBusy(true);
+          await loadNearby(state.user.lat, state.user.lon);
+          renderNearbyList(); renderMap();
+        } catch (e) {
+          setError("Failed to load nearby traffic.");
+        } finally { setBusy(false); }
+      }, () => setError("Location access denied."));
     }
 
     async function runSearch(value) {
       const reg = normalizeRegistration(value);
-      if (!reg) {
-        setError("Enter a registration first.");
-        state.staticData = null;
-        state.liveData = null;
-        state.query = "";
-        renderBase();
-        renderMap();
-        await buildSuggestions();
-        return;
-      }
+      if (!reg) return setError("Enter a valid registration.");
 
       if (state.controller) state.controller.abort();
       state.controller = new AbortController();
 
-      setBusy(true);
-      setError("");
-      state.query = reg;
-      state.staticData = null;
-      state.liveData = null;
+      setBusy(true); setError(""); state.query = reg;
+      state.staticData = null; state.liveData = null;
       renderBase();
-      renderMap();
 
       try {
-        const staticPromise = fetchFirstWorking(
-          ADSBDB_BASES.map(base => `${base}/aircraft/${encodeURIComponent(reg)}`),
-          state.controller.signal
-        ).then(extractAircraftDetails);
+        const pStatic = fetchFirstWorking(ADSBDB_BASES.map(b => `${b}/aircraft/${reg}`), state.controller.signal)
+          .then(extractAircraftDetails).catch(() => null);
+        const pLive = fetchJson(`${ADSBLOL_BASE}/v2/registration/${reg}`, state.controller.signal)
+          .then(extractLiveAircraft).catch(() => null);
 
-        const livePromise = fetchJson(
-          `${ADSBLOL_BASE}/v2/registration/${encodeURIComponent(reg)}`,
-          state.controller.signal
-        ).then(extractLiveAircraft).catch(() => null);
+        const [st, lv] = await Promise.all([pStatic, pLive]);
+        state.staticData = st; state.liveData = lv;
 
-        const [staticData, liveData] = await Promise.all([staticPromise, livePromise]);
-        state.staticData = staticData;
-        state.liveData = liveData;
+        renderBase(); await renderRarity(); renderMap();
 
-        renderBase();
-        await renderRarity();
-        renderMap();
-
-        const status = getLiveStatus(liveData);
-        if (!staticData && !liveData) {
-          setError("Aircraft not found.");
-          await buildSuggestions();
-          renderNearbyList();
-        } else if (!staticData) {
-          await buildSuggestions();
-        } else if (!liveData) {
-          setError("");
+        if (!st && !lv) {
+          setError(`No records or live telemetry found for ${reg}.`);
+          buildSuggestions();
         }
-      } catch (error) {
-        if (error && error.name === "AbortError") return;
-        setError(error instanceof Error ? error.message : "Lookup failed.");
-        renderBase();
-        await renderRarity();
-        renderMap();
-        await buildSuggestions();
-      } finally {
-        setBusy(false);
-      }
+      } catch (e) {
+        if (e.name !== "AbortError") setError("Query failed.");
+      } finally { setBusy(false); }
     }
 
-    el("searchBtn").addEventListener("click", () => runSearch(el("reg").value));
-    el("locBtn").addEventListener("click", () => locateUser(false));
-    el("reg").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") runSearch(el("reg").value);
+    el("searchBtn").onclick = () => runSearch(el("reg").value);
+    el("locBtn").onclick = locateUser;
+    el("reg").onkeydown = (e) => { if (e.key === "Enter") runSearch(el("reg").value); };
+    document.querySelectorAll(".chip").forEach(btn => btn.onclick = () => {
+      el("reg").value = btn.dataset.reg; runSearch(btn.dataset.reg);
     });
 
-    document.querySelectorAll(".chip").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const reg = btn.getAttribute("data-reg");
-        el("reg").value = reg;
-        runSearch(reg);
-      });
-    });
-
-    async function init() {
-      ensureMap();
-      renderBase();
-      renderNearbyList();
-      renderMap();
-      await buildSuggestions();
-      locateUser(true);
+    function init() {
+      ensureMap(); renderBase(); renderNearbyList(); buildSuggestions();
     }
-
     init();
   </script>
 </body>
