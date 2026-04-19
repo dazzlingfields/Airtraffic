@@ -3,351 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ADS-B Registration Tracker</title>
+  <title>ADS-B Registration Tracker NZ</title>
   <style>
-    :root{
-      --bg:#f8fafc;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#64748b;
-      --line:#e2e8f0;
-      --soft:#f1f5f9;
-      --accent:#0f172a;
-      --accent2:#334155;
-      --success-bg:#dcfce7;
-      --success-text:#166534;
-      --warning-bg:#fef3c7;
-      --warning-text:#92400e;
-      --info-bg:#e0f2fe;
-      --info-text:#075985;
-      --neutral-bg:#e2e8f0;
-      --neutral-text:#334155;
-      --error-bg:#fee2e2;
-      --error-text:#991b1b;
-      --shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.04);
-      --radius: 24px;
-      --radius-lg: 32px;
-      --max: 1180px;
-    }
+    :root{--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--soft:#f1f5f9;--accent:#0f172a;--accent2:#334155;--success-bg:#dcfce7;--success-text:#166534;--warning-bg:#fef3c7;--warning-text:#92400e;--info-bg:#e0f2fe;--info-text:#075985;--neutral-bg:#e2e8f0;--neutral-text:#334155;--error-bg:#fee2e2;--error-text:#991b1b;--shadow:0 1px 2px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.04);--radius:24px;--radius-lg:32px;--max:1180px;}
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      background:var(--bg);
-      color:var(--text);
-    }
-    .wrap{
-      max-width:var(--max);
-      margin:0 auto;
-      padding:28px 16px 40px;
-    }
-    .hero{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius-lg);
-      padding:24px;
-      box-shadow:var(--shadow);
-      margin-bottom:24px;
-    }
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 12px;
-      border-radius:999px;
-      background:var(--soft);
-      color:var(--accent2);
-      font-size:12px;
-      font-weight:700;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-      margin-bottom:14px;
-    }
-    h1{
-      margin:0;
-      font-size:clamp(30px, 4vw, 44px);
-      line-height:1.06;
-      letter-spacing:-.03em;
-    }
-    .lead{
-      margin:12px 0 0;
-      max-width:840px;
-      color:var(--muted);
-      line-height:1.6;
-      font-size:15px;
-    }
-    .search-row{
-      margin-top:22px;
-      display:flex;
-      gap:10px;
-      align-items:flex-end;
-      flex-wrap:wrap;
-    }
-    .field{
-      flex:1 1 320px;
-    }
-    label{
-      display:block;
-      font-size:14px;
-      font-weight:600;
-      color:#334155;
-      margin-bottom:8px;
-    }
-    .input-wrap{
-      position:relative;
-    }
-    input{
-      width:100%;
-      border:1px solid #cbd5e1;
-      border-radius:18px;
-      padding:14px 16px 14px 44px;
-      font-size:16px;
-      outline:none;
-      background:#fff;
-      transition:.15s border-color, .15s box-shadow;
-    }
-    input:focus{
-      border-color:#94a3b8;
-      box-shadow:0 0 0 4px rgba(148,163,184,.18);
-    }
-    .search-icon{
-      position:absolute;
-      left:16px;
-      top:50%;
-      transform:translateY(-50%);
-      width:18px;
-      height:18px;
-      color:#94a3b8;
-      pointer-events:none;
-    }
-    button{
-      border:0;
-      border-radius:18px;
-      padding:14px 18px;
-      font-weight:700;
-      font-size:15px;
-      cursor:pointer;
-      transition:.15s transform, .15s opacity, .15s background;
-    }
-    .primary{
-      background:var(--accent);
-      color:white;
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      min-width:124px;
-      justify-content:center;
-    }
-    .primary:hover{background:#111827}
-    .primary:disabled{opacity:.65; cursor:not-allowed}
-    .examples{
-      margin-top:12px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-    }
-    .chip{
-      background:var(--soft);
-      border:1px solid var(--line);
-      color:#334155;
-      padding:8px 12px;
-      border-radius:999px;
-      font-size:13px;
-      font-weight:600;
-      cursor:pointer;
-    }
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    a{color:inherit}
+    .wrap{max-width:var(--max);margin:0 auto;padding:28px 16px 40px}
+    .hero{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow);margin-bottom:24px}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:var(--soft);color:var(--accent2);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px}
+    h1{margin:0;font-size:clamp(30px,4vw,44px);line-height:1.06;letter-spacing:-.03em}
+    .lead{margin:12px 0 0;max-width:920px;color:var(--muted);line-height:1.6;font-size:15px}
+    .search-row{margin-top:22px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+    .field{flex:1 1 320px}
+    label{display:block;font-size:14px;font-weight:600;color:#334155;margin-bottom:8px}
+    .input-wrap{position:relative}
+    input{width:100%;border:1px solid #cbd5e1;border-radius:18px;padding:14px 16px 14px 44px;font-size:16px;outline:none;background:#fff;transition:.15s border-color,.15s box-shadow}
+    input:focus{border-color:#94a3b8;box-shadow:0 0 0 4px rgba(148,163,184,.18)}
+    .search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:#94a3b8;pointer-events:none}
+    button{border:0;border-radius:18px;padding:14px 18px;font-weight:700;font-size:15px;cursor:pointer;transition:.15s transform,.15s opacity,.15s background}
+    .primary{background:var(--accent);color:#fff;display:inline-flex;align-items:center;gap:10px;min-width:124px;justify-content:center}
+    .primary:hover{background:#111827}.primary:disabled{opacity:.65;cursor:not-allowed}
+    .examples{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+    .chip{background:var(--soft);border:1px solid var(--line);color:#334155;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer}
     .chip:hover{background:#e2e8f0}
-    .alert{
-      display:none;
-      margin:0 0 20px;
-      border-radius:18px;
-      padding:14px 16px;
-      border:1px solid #fecaca;
-      background:var(--error-bg);
-      color:var(--error-text);
-      font-size:14px;
-      line-height:1.5;
-    }
-    .grid{
-      display:grid;
-      grid-template-columns:2fr 1fr;
-      gap:24px;
-    }
-    .stack{display:grid; gap:24px;}
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius-lg);
-      box-shadow:var(--shadow);
-      padding:24px;
-    }
-    .heading-row{
-      display:flex;
-      justify-content:space-between;
-      gap:16px;
-      align-items:flex-start;
-      flex-wrap:wrap;
-      margin-bottom:18px;
-    }
-    .eyebrow{
-      color:var(--muted);
-      font-size:14px;
-      font-weight:600;
-    }
-    .status-title{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-top:6px;
-    }
-    .status-title h2{
-      margin:0;
-      font-size:clamp(22px, 2.6vw, 32px);
-      letter-spacing:-.03em;
-    }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      padding:7px 12px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:700;
-      border:1px solid transparent;
-      white-space:nowrap;
-    }
-    .pill.success{background:var(--success-bg); color:var(--success-text); border-color:#bbf7d0;}
-    .pill.warning{background:var(--warning-bg); color:var(--warning-text); border-color:#fde68a;}
-    .pill.info{background:var(--info-bg); color:var(--info-text); border-color:#bae6fd;}
-    .pill.neutral{background:var(--neutral-bg); color:var(--neutral-text); border-color:#cbd5e1;}
-    .summary{
-      background:var(--soft);
-      color:#334155;
-      border-radius:16px;
-      padding:12px 14px;
-      font-size:14px;
-      line-height:1.6;
-      max-width:420px;
-    }
-    .stats{
-      display:grid;
-      grid-template-columns:repeat(4, 1fr);
-      gap:14px;
-    }
-    .stat{
-      border:1px solid var(--line);
-      border-radius:20px;
-      padding:16px;
-      background:#fff;
-      min-height:92px;
-    }
-    .stat .label{
-      color:var(--muted);
-      font-size:12px;
-      font-weight:700;
-      text-transform:uppercase;
-      letter-spacing:.06em;
-      margin-bottom:8px;
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
-    .stat .value{
-      font-size:15px;
-      font-weight:700;
-      line-height:1.35;
-      word-break:break-word;
-    }
-    .two-col{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:24px;
-    }
-    .details{
-      display:grid;
-      gap:12px;
-      margin-top:16px;
-    }
-    .row{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:18px;
-      padding-bottom:10px;
-      border-bottom:1px solid #f1f5f9;
-    }
-    .row:last-child{border-bottom:0; padding-bottom:0}
-    .row span:first-child{color:var(--muted)}
-    .row span:last-child{
-      font-weight:700;
-      text-align:right;
-      word-break:break-word;
-      max-width:65%;
-    }
-    .photo{
-      overflow:hidden;
-      border-radius:24px;
-      border:1px solid var(--line);
-      background:#fff;
-      box-shadow:var(--shadow);
-    }
-    .photo img{
-      width:100%;
-      height:260px;
-      object-fit:cover;
-      display:block;
-    }
-    .photo .caption{
-      padding:14px 16px;
-      font-size:13px;
-      color:var(--muted);
-    }
-    .muted-box{
-      border:1px dashed #cbd5e1;
-      background:white;
-      border-radius:24px;
-      padding:18px;
-      color:var(--muted);
-      box-shadow:var(--shadow);
-      font-size:14px;
-      line-height:1.6;
-    }
-    .notes ul{
-      margin:12px 0 0 18px;
-      padding:0;
-      color:#475569;
-      line-height:1.7;
-      font-size:14px;
-    }
-    .spinner{
-      width:16px;
-      height:16px;
-      border:2px solid rgba(255,255,255,.4);
-      border-top-color:#fff;
-      border-radius:50%;
-      display:inline-block;
-      animation:spin 1s linear infinite;
-    }
-    .icon{
-      width:16px;
-      height:16px;
-      display:inline-block;
-      vertical-align:middle;
-    }
+    .alert{display:none;margin:0 0 20px;border-radius:18px;padding:14px 16px;border:1px solid #fecaca;background:var(--error-bg);color:var(--error-text);font-size:14px;line-height:1.5}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:24px}
+    .stack{display:grid;gap:24px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:24px}
+    .heading-row{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}
+    .eyebrow{color:var(--muted);font-size:14px;font-weight:600}
+    .status-title{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px}
+    .status-title h2{margin:0;font-size:clamp(22px,2.6vw,32px);letter-spacing:-.03em}
+    .pill{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent;white-space:nowrap}
+    .pill.success{background:var(--success-bg);color:var(--success-text);border-color:#bbf7d0}.pill.warning{background:var(--warning-bg);color:var(--warning-text);border-color:#fde68a}.pill.info{background:var(--info-bg);color:var(--info-text);border-color:#bae6fd}.pill.neutral{background:var(--neutral-bg);color:var(--neutral-text);border-color:#cbd5e1}
+    .summary{background:var(--soft);color:#334155;border-radius:16px;padding:12px 14px;font-size:14px;line-height:1.6;max-width:460px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .stat{border:1px solid var(--line);border-radius:20px;padding:16px;background:#fff;min-height:92px}
+    .stat .label{color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+    .stat .value{font-size:15px;font-weight:700;line-height:1.35;word-break:break-word}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    .details{display:grid;gap:12px;margin-top:16px}
+    .row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding-bottom:10px;border-bottom:1px solid #f1f5f9}
+    .row:last-child{border-bottom:0;padding-bottom:0}.row span:first-child{color:var(--muted)}.row span:last-child{font-weight:700;text-align:right;word-break:break-word;max-width:65%}
+    .photo{overflow:hidden;border-radius:24px;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
+    .photo img{width:100%;height:260px;object-fit:cover;display:block}.photo .caption{padding:14px 16px;font-size:13px;color:var(--muted)}
+    .muted-box{border:1px dashed #cbd5e1;background:#fff;border-radius:24px;padding:18px;color:var(--muted);box-shadow:var(--shadow);font-size:14px;line-height:1.6}
+    .notes ul{margin:12px 0 0 18px;padding:0;color:#475569;line-height:1.7;font-size:14px}
+    .gallery{display:grid;gap:12px;margin-top:14px}
+    .gallery a{display:block;text-decoration:none;border:1px solid var(--line);background:#fff;border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);transition:.15s transform,.15s background}.gallery a:hover{transform:translateY(-1px);background:#f8fafc}
+    .gallery .title{font-weight:700;margin-bottom:4px;color:#0f172a}.gallery .meta{font-size:13px;color:var(--muted);line-height:1.5}
+    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin 1s linear infinite}.icon{width:16px;height:16px;display:inline-block;vertical-align:middle}.small-note{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5}
     @keyframes spin{to{transform:rotate(360deg)}}
-    @media (max-width: 960px){
-      .grid, .two-col{grid-template-columns:1fr}
-      .stats{grid-template-columns:repeat(2, 1fr)}
-      .summary{max-width:none}
-    }
-    @media (max-width: 560px){
-      .wrap{padding:14px}
-      .hero, .card{padding:18px}
-      .stats{grid-template-columns:1fr}
-      input{font-size:16px}
-      button{width:100%}
-      .primary{min-width:0}
-    }
+    @media (max-width:960px){.grid,.two-col{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.summary{max-width:none}}
+    @media (max-width:560px){.wrap{padding:14px}.hero,.card{padding:18px}.stats{grid-template-columns:1fr}input{font-size:16px}button{width:100%}.primary{min-width:0}}
   </style>
 </head>
 <body>
@@ -355,27 +64,17 @@
     <section class="hero">
       <div class="badge">Simple aircraft tracker</div>
       <h1>Check a registration and see whether it is flying.</h1>
-      <p class="lead">
-        ADSBDB provides the aircraft identity data. ADSB.lol provides the live registration lookup.
-        Type a tail number, press Check, and the page will show a plain-English status with the latest visible position when available.
-      </p>
-
+      <p class="lead">ADSBDB provides the aircraft identity data. ADSB.lol provides the live registration lookup. Type a tail number, press Check, and the page will show a plain-English status with the latest visible position when available.</p>
       <div class="search-row">
         <div class="field">
           <label for="reg">Registration</label>
           <div class="input-wrap">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="7"></circle>
-              <path d="M20 20l-3.5-3.5"></path>
-            </svg>
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
             <input id="reg" value="ZK-ABC" placeholder="e.g. ZK-ABC" autocomplete="off" spellcheck="false" />
           </div>
         </div>
-        <button id="checkBtn" class="primary">
-          <span id="btnIcon">Search</span>
-        </button>
+        <button id="checkBtn" class="primary"><span id="btnIcon">Search</span></button>
       </div>
-
       <div class="examples">
         <button class="chip" data-reg="ZK-ABC">ZK-ABC</button>
         <button class="chip" data-reg="N12345">N12345</button>
@@ -392,392 +91,93 @@
           <div class="heading-row">
             <div>
               <div class="eyebrow">Current status</div>
-              <div class="status-title">
-                <h2 id="queryTitle">ZK-ABC</h2>
-                <span id="statusPill" class="pill neutral">Not seen live</span>
-              </div>
+              <div class="status-title"><h2 id="queryTitle">ZK-ABC</h2><span id="statusPill" class="pill neutral">Not seen live</span></div>
             </div>
-            <div id="statusDetail" class="summary">
-              Enter a registration and press Check.
-            </div>
+            <div id="statusDetail" class="summary">Enter a registration and press Check.</div>
           </div>
-
           <div class="stats">
-            <div class="stat">
-              <div class="label">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M2 16l20-4-20-4 5 4-5 4z"></path>
-                </svg>
-                Aircraft type
-              </div>
-              <div class="value" id="aircraftType">Unknown</div>
-            </div>
-            <div class="stat">
-              <div class="label">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M2 16l20-4-20-4 5 4-5 4z"></path>
-                </svg>
-                Manufacturer
-              </div>
-              <div class="value" id="manufacturer">Unknown</div>
-            </div>
-            <div class="stat">
-              <div class="label">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 21s6-5.5 6-11a6 6 0 10-12 0c0 5.5 6 11 6 11z"></path>
-                  <circle cx="12" cy="10" r="2"></circle>
-                </svg>
-                Current position
-              </div>
-              <div class="value" id="coords">Unknown</div>
-            </div>
-            <div class="stat">
-              <div class="label">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M12 6v6l4 2"></path>
-                </svg>
-                Last seen
-              </div>
-              <div class="value" id="lastSeen">Unknown</div>
-            </div>
+            <div class="stat"><div class="label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16l20-4-20-4 5 4-5 4z"></path></svg>Aircraft type</div><div class="value" id="aircraftType">Unknown</div></div>
+            <div class="stat"><div class="label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16l20-4-20-4 5 4-5 4z"></path></svg>Manufacturer</div><div class="value" id="manufacturer">Unknown</div></div>
+            <div class="stat"><div class="label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s6-5.5 6-11a6 6 0 10-12 0c0 5.5 6 11 6 11z"></path><circle cx="12" cy="10" r="2"></circle></svg>Current position</div><div class="value" id="coords">Unknown</div></div>
+            <div class="stat"><div class="label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>Last seen</div><div class="value" id="lastSeen">Unknown</div></div>
           </div>
         </section>
-
         <div class="two-col">
-          <section class="card">
-            <h3 style="margin:0; font-size:20px;">Aircraft details</h3>
-            <div class="details">
-              <div class="row"><span>Registration</span><span id="detailReg">Unknown</span></div>
-              <div class="row"><span>Mode S / ICAO hex</span><span id="modeS">Unknown</span></div>
-              <div class="row"><span>Owner</span><span id="owner">Unknown</span></div>
-              <div class="row"><span>Owner country</span><span id="ownerCountry">Unknown</span></div>
-              <div class="row"><span>Photo</span><span id="photoState">Not available</span></div>
-            </div>
-          </section>
-
-          <section class="card">
-            <h3 style="margin:0; font-size:20px;">Live flight snapshot</h3>
-            <div class="details">
-              <div class="row"><span>Callsign</span><span id="callsign">Unknown</span></div>
-              <div class="row"><span>Altitude</span><span id="altitude">Unknown</span></div>
-              <div class="row"><span>Speed</span><span id="speed">Unknown</span></div>
-              <div class="row"><span>Route</span><span id="route">Not shown</span></div>
-              <div class="row"><span>Source</span><span id="source">ADS-B live feed</span></div>
-            </div>
-          </section>
+          <section class="card"><h3 style="margin:0;font-size:20px;">Aircraft details</h3><div class="details"><div class="row"><span>Registration</span><span id="detailReg">Unknown</span></div><div class="row"><span>Mode S / ICAO hex</span><span id="modeS">Unknown</span></div><div class="row"><span>Owner</span><span id="owner">Unknown</span></div><div class="row"><span>Owner country</span><span id="ownerCountry">Unknown</span></div><div class="row"><span>Photo</span><span id="photoState">Not available</span></div></div></section>
+          <section class="card"><h3 style="margin:0;font-size:20px;">Live flight snapshot</h3><div class="details"><div class="row"><span>Callsign</span><span id="callsign">Unknown</span></div><div class="row"><span>Altitude</span><span id="altitude">Unknown</span></div><div class="row"><span>Speed</span><span id="speed">Unknown</span></div><div class="row"><span>Route</span><span id="route">Not shown</span></div><div class="row"><span>Source</span><span id="source">ADS-B live feed</span></div></div></section>
         </div>
+        <section class="card"><h3 style="margin:0;font-size:20px;">New Zealand rarity and class</h3><div class="details"><div class="row"><span>Category</span><span id="nzCategory">Unknown</span></div><div class="row"><span>NZ aircraft count</span><span id="nzCount">Unknown</span></div><div class="row"><span>Fly frequency</span><span id="flyFrequency">Unknown</span></div><div class="row"><span>Rarity score</span><span id="rarityScore">Unknown</span></div><div class="row"><span>Rarity band</span><span id="rarityBand">Unknown</span></div></div><div class="small-note">Heuristic only. The score uses the New Zealand register count for the same model when available, then adjusts for the aircraft’s usual operating tempo and whether it is visible live now.</div></section>
       </div>
-
       <aside class="stack">
-        <section class="card">
-          <h3 style="margin:0; font-size:20px;">Plain-English summary</h3>
-          <p id="summaryText" style="margin:12px 0 0; color:#475569; line-height:1.7; font-size:14px;">
-            Enter a registration and press Check.
-          </p>
-        </section>
-
-        <section id="photoCard" class="photo" style="display:none;">
-          <img id="photoImg" alt="Aircraft photo">
-          <div class="caption">Photo from ADSBDB when available.</div>
-        </section>
-
-        <section id="noPhotoCard" class="muted-box">
-          Aircraft photo is not available for this record.
-        </section>
-
-        <section class="card notes">
-          <h3 style="margin:0; font-size:20px;">Notes</h3>
-          <ul>
-            <li>Live ADS-B data can lag or disappear when coverage is poor.</li>
-            <li>Some registrations return metadata even when the aircraft is not visible live.</li>
-            <li>This page keeps the logic simple so it works as a static GitHub Pages site.</li>
-          </ul>
-        </section>
+        <section class="card"><h3 style="margin:0;font-size:20px;">Plain-English summary</h3><p id="summaryText" style="margin:12px 0 0;color:#475569;line-height:1.7;font-size:14px;">Enter a registration and press Check.</p></section>
+        <section id="photoCard" class="photo" style="display:none;"><img id="photoImg" alt="Aircraft photo"><div class="caption">Photo from ADSBDB when available.</div></section>
+        <section id="noPhotoCard" class="muted-box">Aircraft photo is not available for this record.</section>
+        <section class="card"><h3 style="margin:0;font-size:20px;">NZ photo sources</h3><div class="gallery"><a href="https://www.111emergency.co.nz/N-R/RescueHelicopters.htm" target="_blank" rel="noreferrer"><div class="title">Rescue helicopter examples</div><div class="meta">ZK-IZB, ZK-HQO, ZK-HES and other NZ emergency aircraft.</div></a><a href="https://www.jetphotos.com/photo/9929766" target="_blank" rel="noreferrer"><div class="title">Police helicopter photo</div><div class="meta">ZK-IPB Bell 429 GlobalRanger, New Zealand Police.</div></a><a href="https://flyingschool.nz/cessna-150-aerobat/" target="_blank" rel="noreferrer"><div class="title">General aviation example</div><div class="meta">ZK-TWT Cessna 150 Aerobat, a classic training aircraft.</div></a><a href="https://en.wikipedia.org/wiki/List_of_passenger_airlines" target="_blank" rel="noreferrer"><div class="title">Airline example</div><div class="meta">ZK-OKB Air New Zealand 777-200ER photo reference.</div></a></div></section>
+        <section class="card notes"><h3 style="margin:0;font-size:20px;">Notes</h3><ul><li>Live ADS-B data can lag or disappear when coverage is poor.</li><li>Some registrations return metadata even when the aircraft is not visible live.</li><li>The rarity score is approximate and is meant for quick context, not certification-level analysis.</li><li>The New Zealand register is public and updated on the CAA site; this page tries to use that data when the browser allows it.</li></ul></section>
       </aside>
     </div>
   </div>
 
   <script>
-    const EXAMPLES = ["ZK-ABC", "N12345", "G-ABCD", "VH-XYZ"];
-
+    const NZ_REGISTER_CSV_URL = "https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv";
+    const ADSBDB_BASES = ["https://api.adsbdb.com/v1", "https://api.adsbdb.com/v0"];
+    const ADSBLOL_BASE = "https://api.adsb.lol";
     const el = (id) => document.getElementById(id);
+    const state = { loading:false, staticData:null, liveData:null, query:"ZK-ABC", controller:null, nzRegisterRows:null };
 
-    const state = {
-      loading: false,
-      staticData: null,
-      liveData: null,
-      query: "ZK-ABC",
-      controller: null
-    };
-
-    function normalizeRegistration(input) {
-      return String(input || "").trim().toUpperCase().replace(/\s+/g, "");
+    function normalizeRegistration(input){ return String(input||"").trim().toUpperCase().replace(/\s+/g,""); }
+    function normalizeKey(value){ return String(value||"").toLowerCase().replace(/[\s\.\-_/(),]+/g, ""); }
+    function setError(message){ const box=el("error"); if(!message){ box.style.display="none"; box.textContent=""; return; } box.textContent=message; box.style.display="block"; }
+    function setLoading(loading){ state.loading=loading; const btn=el("checkBtn"), icon=el("btnIcon"), input=el("reg"); if(loading){ btn.disabled=true; icon.innerHTML='<span class="spinner" aria-hidden="true"></span> Checking'; input.disabled=true; } else { btn.disabled=false; icon.textContent="Search"; input.disabled=false; } }
+    function pickNumber(...values){ for(const value of values){ const n=Number(value); if(!Number.isNaN(n) && Number.isFinite(n)) return n; } return null; }
+    function formatTimeAgo(value){ if(value===null||value===undefined||value==="") return "Unknown"; const n=Number(value); if(Number.isNaN(n)) return String(value); if(n<60) return `${Math.round(n)}s ago`; if(n<3600) return `${Math.round(n/60)}m ago`; return `${Math.round(n/3600)}h ago`; }
+    function prettyAltitude(ac){ const alt=ac?.alt_baro??ac?.altitude??ac?.alt??ac?.baro_altitude; if(alt===undefined||alt===null||alt==="") return "Unknown"; if(String(alt).toLowerCase()==="ground") return "On ground"; const n=Number(alt); return Number.isNaN(n)?String(alt):`${n.toLocaleString()} ft`; }
+    function prettySpeed(ac){ const speed=pickNumber(ac?.gs,ac?.speed,ac?.ground_speed,ac?.velocity); if(speed===null) return "Unknown"; return `${Math.round(speed).toLocaleString()} kt`; }
+    function prettyCoordinates(ac){ const lat=pickNumber(ac?.lat,ac?.latitude), lon=pickNumber(ac?.lon,ac?.longitude); if(lat===null||lon===null) return "Unknown"; return `${lat.toFixed(4)}, ${lon.toFixed(4)}`; }
+    function extractStaticData(payload){ return payload?.response?.aircraft || payload?.aircraft || payload?.response || null; }
+    function extractLiveData(payload){ const candidate=payload?.response ?? payload; if(Array.isArray(candidate)) return candidate[0]||null; if(candidate && typeof candidate==="object") return candidate; return null; }
+    function getLiveStatus(ac){ if(!ac) return {label:"Not seen live", tone:"neutral", detail:"No live ADS-B hit for this registration right now.", airborne:false}; const onGroundRaw=ac.on_ground ?? ac.ground ?? ac.gnd ?? ac.isOnGround; const onGround=onGroundRaw===true || String(onGroundRaw).toLowerCase()==="true" || String(ac.alt_baro ?? ac.altitude ?? ac.alt).toLowerCase()==="ground"; const lat=pickNumber(ac.lat,ac.latitude), lon=pickNumber(ac.lon,ac.longitude); if(lat===null||lon===null) return {label:onGround?"On the ground":"Live feed found", tone:onGround?"warning":"info", detail:onGround?"The feed can see the aircraft, but it is reporting it as on the ground.":"The aircraft is in the feed, but position data is incomplete.", airborne:!onGround}; if(onGround) return {label:"On the ground", tone:"warning", detail:"The live feed currently shows this aircraft on the ground.", airborne:false}; return {label:"Flying now", tone:"success", detail:`The live feed shows a position at ${lat.toFixed(4)}, ${lon.toFixed(4)}.`, airborne:true}; }
+    function classifyAircraft(staticData, liveData){ const owner=String(staticData?.registered_owner || staticData?.owner_name || staticData?.owner || "").toLowerCase(); const model=String(staticData?.model || staticData?.icao_type || staticData?.type || "").toLowerCase(); const category=String(staticData?.category || staticData?.classification || staticData?.model_category || "").toLowerCase(); const full=`${owner} ${model} ${category}`;
+      if(/(royal new zealand air force|rnzaf|new zealand defence force|nzdf|defence force|military)/i.test(full)) return { label:"Military", tempo:0.55 };
+      if(/(police|pirihimana)/i.test(full)) return { label:"Police", tempo:0.75 };
+      if(/(air new zealand|sounds air|air chathams|originair|barrier air|air kaimana|air2there|airwork|mount cook|pacific air|air safaris|great barrier airlines)/i.test(full)) return { label:"Airline", tempo:0.95 };
+      if(/(rescue|air ambulance|ambulance|helicopter trust|coastguard|fire service|search and rescue|hems|medical)/i.test(full)) return { label:"Other commercial", tempo:0.8 };
+      if(/(charter|training|flight school|aerohire|sightseeing|tour|scenic|survey|agric|agricultural|spray|freight|cargo|logistics|transport|services|limited|ltd|company|trust)/i.test(full)) return { label:"Other commercial", tempo:0.7 };
+      if(/(amateur built|microlight|glider|balloon|gyroplane|power glider|restored historical|private|club|aero club)/i.test(full)) return { label:"General aviation", tempo:0.3 };
+      const onGroundRaw=liveData?.on_ground ?? liveData?.ground ?? liveData?.gnd ?? liveData?.isOnGround; const onGround=onGroundRaw===true || String(onGroundRaw).toLowerCase()==="true" || String(liveData?.alt_baro ?? liveData?.altitude ?? liveData?.alt).toLowerCase()==="ground"; const isLargeAircraft=/(airbus|boeing|embraer|atr|dash 8|q300|q400|fokker|saab|a320|a321|a319|737|747|757|767|777|787|a220|a330|a350)/i.test(model);
+      if(isLargeAircraft && !onGround) return { label:"Airline", tempo:0.9 };
+      if(isLargeAircraft) return { label:"Other commercial", tempo:0.85 };
+      if(/^(aeroplane|airplane|helicopter|amateur built aeroplane|microlight class|glider|balloon|gyroplane)/i.test(category)) return { label:"General aviation", tempo:0.4 };
+      return { label:"Other / unknown", tempo:0.55 };
     }
-
-    function setError(message) {
-      const box = el("error");
-      if (!message) {
-        box.style.display = "none";
-        box.textContent = "";
-        return;
-      }
-      box.textContent = message;
-      box.style.display = "block";
+    function rarityBand(score){ if(score>=75) return "Very rare"; if(score>=50) return "Rare"; if(score>=25) return "Uncommon"; return "Common"; }
+    function csvParse(text){ const rows=[]; let row=[], field="", inQuotes=false; for(let i=0;i<text.length;i++){ const ch=text[i], next=text[i+1]; if(inQuotes){ if(ch=='"'){ if(next=='"'){ field+='"'; i++; } else inQuotes=false; } else field+=ch; continue; } if(ch=='"') inQuotes=true; else if(ch===','){ row.push(field); field=""; } else if(ch==='\n'){ row.push(field); rows.push(row); row=[]; field=""; } else if(ch==='\r'){ continue; } else field+=ch; } if(field.length||row.length){ row.push(field); rows.push(row); } return rows.filter(r=>r.some(c=>String(c||"").trim()!="")); }
+    function mapCsvRows(text){ const rows=csvParse(text); if(rows.length<2) return {headers:[],data:[]}; const headers=rows[0].map(h=>String(h||"").trim()); const data=rows.slice(1).map(r=>{ const obj={}; headers.forEach((h,i)=>{ obj[h]=r[i] ?? ""; }); return obj; }); return {headers,data}; }
+    function findField(row, candidates){ const entries=Object.entries(row); for(const candidate of candidates){ const wanted=normalizeKey(candidate); for(const [key, value] of entries){ if(normalizeKey(key)===wanted) return value; } } for(const candidate of candidates){ const wanted=normalizeKey(candidate); for(const [key, value] of entries){ const k=normalizeKey(key); if(k.includes(wanted) || wanted.includes(k)) return value; } } return ""; }
+    async function loadNzRegister(){ if(state.nzRegisterRows) return state.nzRegisterRows; try{ const response=await fetch(NZ_REGISTER_CSV_URL,{mode:"cors"}); if(!response.ok) throw new Error(`CAA register fetch failed (${response.status})`); const text=await response.text(); state.nzRegisterRows=mapCsvRows(text).data; return state.nzRegisterRows; } catch(err){ state.nzRegisterRows=[]; return []; } }
+    async function lookupNzStats(staticData, liveData){ const rows=await loadNzRegister(); const modelKey=normalizeKey(staticData?.model || staticData?.icao_type || staticData?.type || ""); const categoryKey=normalizeKey(staticData?.category || staticData?.classification || staticData?.model_category || ""); const classified=classifyAircraft(staticData, liveData);
+      if(!rows.length) return { count:null, category:classified.label, frequencyLabel:classified.tempo>=0.9?"Frequent":classified.tempo>=0.7?"Regular":classified.tempo>=0.45?"Variable":"Infrequent", rarityScore:null, rarityBand:"Unknown" };
+      const modelCount = modelKey ? rows.filter(row => normalizeKey(findField(row,["Model","Aircraft Model"])) === modelKey).length : 0;
+      const categoryCount = categoryKey ? rows.filter(row => normalizeKey(findField(row,["Model Category","Category","Classification"])) === categoryKey).length : 0;
+      const count = modelCount || categoryCount || null;
+      const logCount = count ? Math.log10(count + 1) : 0.5;
+      const countFactor = Math.min(logCount / 2.8, 1);
+      const tempoFactor = Math.min(Math.max(classified.tempo, 0.1), 1);
+      let rarityScore = Math.round((0.75 * (1 - countFactor) + 0.25 * (1 - tempoFactor)) * 100);
+      if(liveData && getLiveStatus(liveData).airborne) rarityScore = Math.max(0, rarityScore - 5);
+      return { count, category:classified.label, frequencyLabel: classified.tempo>=0.9?"Frequent":classified.tempo>=0.7?"Regular":classified.tempo>=0.45?"Variable":"Infrequent", rarityScore, rarityBand:rarityBand(rarityScore) };
     }
-
-    function setLoading(loading) {
-      state.loading = loading;
-      const btn = el("checkBtn");
-      const icon = el("btnIcon");
-      const input = el("reg");
-      if (loading) {
-        btn.disabled = true;
-        icon.innerHTML = '<span class="spinner" aria-hidden="true"></span> Checking';
-        input.disabled = true;
-      } else {
-        btn.disabled = false;
-        icon.textContent = "Search";
-        input.disabled = false;
-      }
-    }
-
-    function pickNumber(...values) {
-      for (const value of values) {
-        const n = Number(value);
-        if (!Number.isNaN(n) && Number.isFinite(n)) return n;
-      }
-      return null;
-    }
-
-    function formatTimeAgo(value) {
-      if (value === null || value === undefined || value === "") return "Unknown";
-      const n = Number(value);
-      if (Number.isNaN(n)) return String(value);
-      if (n < 60) return `${Math.round(n)}s ago`;
-      if (n < 3600) return `${Math.round(n / 60)}m ago`;
-      return `${Math.round(n / 3600)}h ago`;
-    }
-
-    function prettyAltitude(ac) {
-      const alt = ac?.alt_baro ?? ac?.altitude ?? ac?.alt ?? ac?.baro_altitude;
-      if (alt === undefined || alt === null || alt === "") return "Unknown";
-      if (String(alt).toLowerCase() === "ground") return "On ground";
-      const n = Number(alt);
-      return Number.isNaN(n) ? String(alt) : `${n.toLocaleString()} ft`;
-    }
-
-    function prettySpeed(ac) {
-      const speed = pickNumber(ac?.gs, ac?.speed, ac?.ground_speed, ac?.velocity);
-      if (speed === null) return "Unknown";
-      return `${Math.round(speed).toLocaleString()} kt`;
-    }
-
-    function prettyCoordinates(ac) {
-      const lat = pickNumber(ac?.lat, ac?.latitude);
-      const lon = pickNumber(ac?.lon, ac?.longitude);
-      if (lat === null || lon === null) return "Unknown";
-      return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-    }
-
-    function extractStaticData(payload) {
-      return payload?.response?.aircraft || payload?.aircraft || payload?.response || null;
-    }
-
-    function extractLiveData(payload) {
-      const candidate = payload?.response ?? payload;
-      if (Array.isArray(candidate)) return candidate[0] || null;
-      if (candidate && typeof candidate === "object") return candidate;
-      return null;
-    }
-
-    function getLiveStatus(ac) {
-      if (!ac) {
-        return {
-          label: "Not seen live",
-          tone: "neutral",
-          detail: "No live ADS-B hit for this registration right now."
-        };
-      }
-
-      const onGroundRaw = ac.on_ground ?? ac.ground ?? ac.gnd ?? ac.isOnGround;
-      const onGround = onGroundRaw === true || String(onGroundRaw).toLowerCase() === "true" || String(ac.alt_baro ?? ac.altitude ?? ac.alt).toLowerCase() === "ground";
-      const lat = pickNumber(ac.lat, ac.latitude);
-      const lon = pickNumber(ac.lon, ac.longitude);
-
-      if (lat === null || lon === null) {
-        return {
-          label: onGround ? "On the ground" : "Live feed found",
-          tone: onGround ? "warning" : "info",
-          detail: onGround
-            ? "The feed can see the aircraft, but it is reporting it as on the ground."
-            : "The aircraft is in the feed, but position data is incomplete."
-        };
-      }
-
-      if (onGround) {
-        return {
-          label: "On the ground",
-          tone: "warning",
-          detail: "The live feed currently shows this aircraft on the ground."
-        };
-      }
-
-      return {
-        label: "Flying now",
-        tone: "success",
-        detail: `The live feed shows a position at ${lat.toFixed(4)}, ${lon.toFixed(4)}.`
-      };
-    }
-
-    function setPill(tone, label) {
-      const pill = el("statusPill");
-      pill.className = `pill ${tone}`;
-      pill.textContent = label;
-    }
-
-    function setRow(id, value) {
-      el(id).textContent = value;
-    }
-
-    function render() {
-      const staticData = state.staticData;
-      const liveData = state.liveData;
-      const status = getLiveStatus(liveData);
-
-      setRow("queryTitle", state.query || "No query yet");
-      setPill(status.tone, status.label);
-      setRow("statusDetail", status.detail);
-
-      setRow("aircraftType", staticData?.icao_type || staticData?.type || "Unknown");
-      setRow("manufacturer", staticData?.manufacturer || "Unknown");
-      setRow("coords", prettyCoordinates(liveData));
-      setRow("lastSeen", formatTimeAgo(liveData?.seen ?? liveData?.seen_pos ?? liveData?.seen_pos_sec ?? liveData?.age));
-
-      setRow("detailReg", staticData?.registration || state.query || "Unknown");
-      setRow("modeS", staticData?.mode_s || "Unknown");
-      setRow("owner", staticData?.registered_owner || "Unknown");
-      setRow("ownerCountry", staticData?.registered_owner_country_name || staticData?.registered_owner_country_iso_name || "Unknown");
-      setRow("photoState", staticData?.url_photo || staticData?.url_photo_thumbnail ? "Available" : "Not available");
-
-      setRow("callsign", liveData?.flight || liveData?.callsign || liveData?.ident || liveData?.cs || "Unknown");
-      setRow("altitude", prettyAltitude(liveData));
-      setRow("speed", prettySpeed(liveData));
-      setRow("route", liveData?.r || liveData?.route || liveData?.from || "Not shown");
-      setRow("source", liveData?.src || liveData?.source || "ADS-B live feed");
-
-      const summary = el("summaryText");
-      if (state.loading) {
-        summary.textContent = "Looking up the aircraft...";
-      } else if (liveData) {
-        summary.textContent = "This aircraft is visible in the live feed. The page shows its latest known position, plus simple identity details from ADSBDB.";
-      } else if (staticData) {
-        summary.textContent = "The aircraft record was found, but there is no live position right now. That usually means coverage is poor, the aircraft is offline, or the feed is not seeing it at the moment.";
-      } else {
-        summary.textContent = "Enter a registration and press Check.";
-      }
-
-      const photoUrl = staticData?.url_photo || staticData?.url_photo_thumbnail;
-      const photoCard = el("photoCard");
-      const noPhotoCard = el("noPhotoCard");
-      if (photoUrl) {
-        el("photoImg").src = photoUrl;
-        photoCard.style.display = "block";
-        noPhotoCard.style.display = "none";
-      } else {
-        photoCard.style.display = "none";
-        noPhotoCard.style.display = "block";
-      }
-    }
-
-    async function fetchJson(url, signal) {
-      const response = await fetch(url, { signal, mode: "cors" });
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`${response.status} ${response.statusText}${text ? ": " + text : ""}`);
-      }
-      return response.json();
-    }
-
-    async function fetchFirstWorking(urls, signal) {
-      let lastError = null;
-      for (const url of urls) {
-        try {
-          return await fetchJson(url, signal);
-        } catch (error) {
-          lastError = error;
-        }
-      }
-      throw lastError || new Error("Request failed");
-    }
-
-    async function runSearch(value) {
-      const reg = normalizeRegistration(value);
-      if (!reg) {
-        setError("Enter a registration first.");
-        state.staticData = null;
-        state.liveData = null;
-        state.query = "";
-        render();
-        return;
-      }
-
-      if (state.controller) state.controller.abort();
-      state.controller = new AbortController();
-
-      setLoading(true);
-      setError("");
-      state.query = reg;
-      state.staticData = null;
-      state.liveData = null;
-      render();
-
-      try {
-        const staticPromise = fetchFirstWorking(
-          [
-            `https://api.adsbdb.com/v1/aircraft/${encodeURIComponent(reg)}`,
-            `https://api.adsbdb.com/v0/aircraft/${encodeURIComponent(reg)}`
-          ],
-          state.controller.signal
-        ).then(extractStaticData);
-
-        const livePromise = fetchJson(
-          `https://api.adsb.lol/v2/registration/${encodeURIComponent(reg)}`,
-          state.controller.signal
-        ).then(extractLiveData).catch(() => null);
-
-        const [staticData, liveData] = await Promise.all([staticPromise, livePromise]);
-
-        state.staticData = staticData;
-        state.liveData = liveData;
-        render();
-
-        if (!staticData && !liveData) {
-          setError("No matching aircraft was found in the databases checked.");
-        }
-      } catch (error) {
-        if (error && error.name === "AbortError") return;
-        setError(error instanceof Error ? error.message : "Lookup failed.");
-        render();
-      } finally {
-        setLoading(false);
-      }
-    }
-
+    function setPill(tone, label){ const pill=el("statusPill"); pill.className=`pill ${tone}`; pill.textContent=label; }
+    function setRow(id, value){ el(id).textContent = value; }
+    function renderBase(){ const staticData=state.staticData, liveData=state.liveData, status=getLiveStatus(liveData), classified=classifyAircraft(staticData, liveData); setRow("queryTitle", state.query || "No query yet"); setPill(status.tone, status.label); setRow("statusDetail", status.detail); setRow("aircraftType", staticData?.icao_type || staticData?.type || "Unknown"); setRow("manufacturer", staticData?.manufacturer || "Unknown"); setRow("coords", prettyCoordinates(liveData)); setRow("lastSeen", formatTimeAgo(liveData?.seen ?? liveData?.seen_pos ?? liveData?.seen_pos_sec ?? liveData?.age)); setRow("detailReg", staticData?.registration || state.query || "Unknown"); setRow("modeS", staticData?.mode_s || "Unknown"); setRow("owner", staticData?.registered_owner || "Unknown"); setRow("ownerCountry", staticData?.registered_owner_country_name || staticData?.registered_owner_country_iso_name || "Unknown"); setRow("photoState", staticData?.url_photo || staticData?.url_photo_thumbnail ? "Available" : "Not available"); setRow("callsign", liveData?.flight || liveData?.callsign || liveData?.ident || liveData?.cs || "Unknown"); setRow("altitude", prettyAltitude(liveData)); setRow("speed", prettySpeed(liveData)); setRow("route", liveData?.r || liveData?.route || liveData?.from || "Not shown"); setRow("source", liveData?.src || liveData?.source || "ADS-B live feed"); setRow("nzCategory", classified.label); setRow("flyFrequency", classified.tempo>=0.9?"Frequent":classified.tempo>=0.7?"Regular":classified.tempo>=0.45?"Variable":"Infrequent"); setRow("rarityScore", "Calculating..."); setRow("rarityBand", "Calculating..."); const summary=el("summaryText"); if(state.loading) summary.textContent="Looking up the aircraft..."; else if(liveData) summary.textContent="This aircraft is visible in the live feed. The page shows its latest known position, plus simple identity details from ADSBDB."; else if(staticData) summary.textContent="The aircraft record was found, but there is no live position right now. That usually means coverage is poor, the aircraft is offline, or the feed is not seeing it at the moment."; else summary.textContent="Enter a registration and press Check."; const photoUrl=staticData?.url_photo || staticData?.url_photo_thumbnail; const photoCard=el("photoCard"), noPhotoCard=el("noPhotoCard"); if(photoUrl){ el("photoImg").src=photoUrl; photoCard.style.display="block"; noPhotoCard.style.display="none"; } else { photoCard.style.display="none"; noPhotoCard.style.display="block"; } }
+    async function renderRarity(){ const stats=await lookupNzStats(state.staticData || {}, state.liveData || null); setRow("nzCategory", stats.category || "Unknown"); setRow("nzCount", stats.count === null ? "Unavailable" : `${stats.count.toLocaleString()} aircraft`); setRow("flyFrequency", stats.frequencyLabel || "Unknown"); setRow("rarityScore", stats.rarityScore === null ? "Unavailable" : `${stats.rarityScore}/100`); setRow("rarityBand", stats.rarityBand || "Unknown"); }
+    async function fetchJson(url, signal){ const response=await fetch(url,{signal,mode:"cors"}); if(!response.ok){ const text=await response.text().catch(()=>""); throw new Error(`${response.status} ${response.statusText}${text ? ": " + text : ""}`); } return response.json(); }
+    async function fetchFirstWorking(urls, signal){ let lastError=null; for(const url of urls){ try{ return await fetchJson(url, signal); } catch(error){ lastError=error; } } throw lastError || new Error("Request failed"); }
+    async function runSearch(value){ const reg=normalizeRegistration(value); if(!reg){ setError("Enter a registration first."); state.staticData=null; state.liveData=null; state.query=""; renderBase(); return; } if(state.controller) state.controller.abort(); state.controller=new AbortController(); setLoading(true); setError(""); state.query=reg; state.staticData=null; state.liveData=null; renderBase(); try{ const staticPromise=fetchFirstWorking(ADSBDB_BASES.map(base => `${base}/aircraft/${encodeURIComponent(reg)}`), state.controller.signal).then(extractStaticData); const livePromise=fetchJson(`${ADSBLOL_BASE}/v2/registration/${encodeURIComponent(reg)}`, state.controller.signal).then(extractLiveData).catch(()=>null); const [staticData, liveData] = await Promise.all([staticPromise, livePromise]); state.staticData=staticData; state.liveData=liveData; renderBase(); await renderRarity(); if(!staticData && !liveData) setError("No matching aircraft was found in the databases checked."); } catch(error){ if(error && error.name==="AbortError") return; setError(error instanceof Error ? error.message : "Lookup failed."); renderBase(); await renderRarity(); } finally{ setLoading(false); } }
     el("checkBtn").addEventListener("click", () => runSearch(el("reg").value));
-    el("reg").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") runSearch(el("reg").value);
-    });
-
-    document.querySelectorAll(".chip").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const reg = btn.getAttribute("data-reg");
-        el("reg").value = reg;
-        runSearch(reg);
-      });
-    });
-
-    render();
+    el("reg").addEventListener("keydown", (e) => { if(e.key === "Enter") runSearch(el("reg").value); });
+    document.querySelectorAll(".chip").forEach(btn => btn.addEventListener("click", () => { const reg = btn.getAttribute("data-reg"); el("reg").value = reg; runSearch(reg); }));
+    renderBase(); renderRarity();
   </script>
 </body>
 </html>
