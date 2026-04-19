@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ADS-B NZ Aircraft Tracker</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -677,7 +677,7 @@
               <h3 class="section-title">Nearby Live Traffic</h3>
               <div class="subtle" id="nearbyHint">Enable location to scan airspace.</div>
             </div>
-            <span id="nearbyStatus" class="pill neutral">Awaiting Loc</span>
+            <span id="nearbyStatus" class="pill neutral">Awaiting Location</span>
           </div>
           <div id="nearbyList" class="list">
             <div class="muted-box">Location required to detect proximal aircraft.</div>
@@ -879,14 +879,18 @@
     async function loadNzRegister() {
       if (state.nzRows) return state.nzRows;
       try {
-        const res = await fetch(NZ_REGISTER_CSV_URL, { mode: "cors" });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // Prevent endless hanging
+        const res = await fetch(NZ_REGISTER_CSV_URL, { mode: "cors", signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         if (!res.ok) throw new Error();
         const text = await res.text();
         const rows = text.split('\n').map(r => r.split(',').map(c => c.replace(/"/g, '').trim()));
         const headers = rows[0];
         state.nzRows = rows.slice(1).map(r => {
           let obj = {};
-          headers.forEach((h, i) => obj[h.toLowerCase()] = r[i] || "");
+          headers.forEach((h, i) => obj[h?.toLowerCase()] = r[i] || "");
           return obj;
         });
         return state.nzRows;
@@ -1012,7 +1016,7 @@
       list.innerHTML = "";
       if (!state.user) {
         el("nearbyStatus").className = "pill neutral";
-        el("nearbyStatus").textContent = "Awaiting Loc";
+        el("nearbyStatus").textContent = "Awaiting Location";
         return;
       }
       if (!state.nearby.length) {
@@ -1142,7 +1146,8 @@
       try {
         const pStatic = fetchFirstWorking(ADSBDB_BASES.map(b => `${b}/aircraft/${reg}`), state.controller.signal)
           .then(extractAircraftDetails).catch(() => null);
-        const pLive = fetchJson(`${ADSBLOL_BASE}/v2/registration/${reg}`, state.controller.signal)
+        // Correctly updated endpoint per adsb.lol documentation
+        const pLive = fetchJson(`${ADSBLOL_BASE}/v2/reg/${reg}`, state.controller.signal)
           .then(extractLiveAircraft).catch(() => null);
 
         const [st, lv] = await Promise.all([pStatic, pLive]);
@@ -1167,7 +1172,12 @@
     });
 
     function init() {
-      ensureMap(); renderBase(); renderNearbyList(); buildSuggestions();
+      ensureMap(); 
+      renderBase(); 
+      renderNearbyList(); 
+      buildSuggestions();
+      // Instantly track on initial load so it never appears "stuck on waiting"
+      runSearch(el("reg").value); 
     }
     init();
   </script>
