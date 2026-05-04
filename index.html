@@ -11,22 +11,30 @@
 <style>
 :root{
   color-scheme:light dark;
-  --bg:#090e1e;--bg2:#0e1428;
-  --panel:rgba(13,19,36,.92);--panel2:rgba(9,14,28,.95);
-  --line:rgba(52,76,122,.3);--line2:rgba(72,106,162,.5);
-  --tx:#dde8ff;--mu:#4a5e88;--mu2:#7090be;
-  --A:#f59e0b;--G:#34d399;--C:#38bdf8;--R:#f87171;--O:#fb923c;
-  --shad:0 18px 52px rgba(0,0,0,.55);
-  --r:20px;--r2:12px;
+  --bg:#070c1a;--bg2:#0b1022;
+  --panel:rgba(9,14,28,.94);--panel2:rgba(6,10,20,.97);
+  --line:rgba(40,60,110,.32);--line2:rgba(60,94,158,.52);
+  --tx:#ccd8f2;--mu:#3b5278;--mu2:#6282b4;
+  --A:#e8a020;--G:#1ec878;--C:#22b4f0;--R:#e84848;--O:#e88030;
+  --shad:0 18px 52px rgba(0,0,0,.65);
+  --r:16px;--r2:10px;
   --font:'Outfit',system-ui,sans-serif;
   --mono:'JetBrains Mono',monospace;
+  /* category accent colours */
+  --ch:#a78bfa;  /* heavy */
+  --ca:#38bdf8;  /* airline / regional */
+  --cb:#f59e0b;  /* bizjet */
+  --cg:#34d399;  /* GA / turboprop */
+  --cr:#fb923c;  /* rotorcraft */
+  --cm:#f87171;  /* military */
+  --cx:#8899bb;  /* glider / unknown */
 }
 @media(prefers-color-scheme:light){:root{
-  --bg:#eef2fc;--bg2:#e4eaf8;
-  --panel:rgba(255,255,255,.92);--panel2:rgba(246,250,255,.97);
-  --line:rgba(144,168,210,.22);--line2:rgba(96,136,200,.4);
-  --tx:#0d1828;--mu:#566480;--mu2:#7888a4;
-  --shad:0 8px 32px rgba(10,22,58,.08);
+  --bg:#e6ecf8;--bg2:#dde5f5;
+  --panel:rgba(255,255,255,.94);--panel2:rgba(242,248,255,.98);
+  --line:rgba(124,152,200,.22);--line2:rgba(80,124,192,.38);
+  --tx:#081728;--mu:#506080;--mu2:#7888a8;
+  --shad:0 8px 32px rgba(10,22,58,.09);
 }}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{height:100%}
@@ -34,68 +42,94 @@ body{
   font-family:var(--font);
   background:var(--bg);
   background-image:
-    radial-gradient(ellipse 65% 45% at 8% 0%,rgba(56,189,248,.09),transparent 50%),
-    radial-gradient(ellipse 48% 36% at 93% 10%,rgba(245,158,11,.07),transparent 45%);
+    radial-gradient(ellipse 65% 45% at 8% 0%,rgba(34,180,240,.08),transparent 50%),
+    radial-gradient(ellipse 48% 36% at 93% 10%,rgba(232,160,32,.07),transparent 45%);
   color:var(--tx);min-height:100%;font-size:14px;line-height:1.5;
 }
 @media(prefers-color-scheme:light){body{background-image:
-    radial-gradient(ellipse 65% 45% at 8% 0%,rgba(56,189,248,.05),transparent 50%),
-    radial-gradient(ellipse 48% 36% at 93% 10%,rgba(245,158,11,.04),transparent 45%);
+    radial-gradient(ellipse 65% 45% at 8% 0%,rgba(34,180,240,.05),transparent 50%),
+    radial-gradient(ellipse 48% 36% at 93% 10%,rgba(232,160,32,.04),transparent 45%);
 }}
-/* NAV */
+
+/* ── NAV ── */
 .nav{
   position:sticky;top:0;z-index:300;height:50px;
   display:flex;align-items:center;gap:12px;padding:0 18px;
-  background:color-mix(in srgb,var(--panel) 88%,transparent);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  background:color-mix(in srgb,var(--panel) 90%,transparent);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
   border-bottom:1px solid var(--line);
 }
 .nav-logo{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;letter-spacing:-.02em;flex-shrink:0;}
-.logo-mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,rgba(245,158,11,.24),rgba(56,189,248,.16));border:1px solid var(--line2);display:grid;place-items:center;}
+.logo-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,rgba(232,160,32,.22),rgba(34,180,240,.14));border:1px solid var(--line2);display:grid;place-items:center;}
 .nav-div{width:1px;height:18px;background:var(--line);}
-.nav-sub{font-size:11px;color:var(--mu2);font-weight:500;}
+.nav-sub{font-size:10px;color:var(--mu2);font-weight:600;letter-spacing:.08em;font-family:var(--mono);}
+.nav-mode{font-size:9px;font-family:var(--mono);font-weight:700;letter-spacing:.14em;color:var(--mu);text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:2px 7px;}
 .nav-r{margin-left:auto;}
-.sp{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02);font-size:11px;font-weight:700;letter-spacing:.02em;transition:color .3s;}
-.sd{width:6px;height:6px;border-radius:50%;background:var(--G);flex-shrink:0;box-shadow:0 0 0 3px rgba(52,211,153,.16);animation:blink 2.8s ease-in-out infinite;}
-.sd.warn{background:var(--A);box-shadow:0 0 0 3px rgba(245,158,11,.16);}
-.sd.bad{background:var(--R);box-shadow:0 0 0 3px rgba(248,113,113,.16);animation:none;}
-@keyframes blink{0%,100%{box-shadow:0 0 0 3px rgba(52,211,153,.16)}50%{box-shadow:0 0 0 7px rgba(52,211,153,.03)}}
-/* LAYOUT */
+.sp{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02);font-size:11px;font-weight:700;letter-spacing:.02em;font-family:var(--mono);transition:color .3s;}
+.sd{width:6px;height:6px;border-radius:50%;background:var(--G);flex-shrink:0;box-shadow:0 0 0 3px rgba(30,200,120,.16);animation:blink 2.8s ease-in-out infinite;}
+.sd.warn{background:var(--A);box-shadow:0 0 0 3px rgba(232,160,32,.16);}
+.sd.bad{background:var(--R);box-shadow:0 0 0 3px rgba(232,72,72,.16);animation:none;}
+@keyframes blink{0%,100%{box-shadow:0 0 0 3px rgba(30,200,120,.16)}50%{box-shadow:0 0 0 7px rgba(30,200,120,.03)}}
+
+/* ── LAYOUT ── */
 .wrap{max-width:1560px;margin:0 auto;padding:14px 14px 36px;}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shad);overflow:hidden;}
-/* NEAREST BANNER */
+
+/* ── NEAREST BANNER ── */
 .nearest{
   padding:18px 20px 16px;margin-bottom:13px;
-  background:linear-gradient(135deg,rgba(245,158,11,.06) 0%,rgba(56,189,248,.03) 100%),var(--panel);
+  background:linear-gradient(135deg,rgba(232,160,32,.05) 0%,rgba(34,180,240,.03) 100%),var(--panel);
   position:relative;overflow:hidden;
 }
 .nearest::before{
   content:'';position:absolute;inset:0;pointer-events:none;
-  background-image:linear-gradient(rgba(56,189,248,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.022) 1px,transparent 1px);
-  background-size:32px 32px;
+  background-image:linear-gradient(rgba(34,180,240,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(34,180,240,.018) 1px,transparent 1px);
+  background-size:28px 28px;
 }
 @media(prefers-color-scheme:light){.nearest::before{background-image:
-    linear-gradient(rgba(56,189,248,.038) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(56,189,248,.038) 1px,transparent 1px);
+    linear-gradient(rgba(34,180,240,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(34,180,240,.035) 1px,transparent 1px);
 }}
-.nc-ey{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--mu2);margin-bottom:11px;position:relative;}
+.nc-ey{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;
+  color:var(--mu2);margin-bottom:12px;position:relative;
+  font-family:var(--mono);display:flex;align-items:center;gap:8px;
+}
+.nc-ey::before{content:'◈';font-size:10px;color:var(--A);opacity:.7;}
 .nc-body{display:grid;grid-template-columns:88px 1fr auto;gap:16px;align-items:start;position:relative;}
-.ac-photo{width:88px;height:66px;border-radius:10px;overflow:hidden;border:1px solid var(--line2);background:linear-gradient(135deg,rgba(245,158,11,.14),rgba(56,189,248,.09));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--mu);font-size:10px;text-align:center;padding:4px;line-height:1.4;}
+.ac-photo{width:88px;height:66px;border-radius:8px;overflow:hidden;border:1px solid var(--line2);background:linear-gradient(135deg,rgba(232,160,32,.12),rgba(34,180,240,.08));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--mu);font-size:9px;font-family:var(--mono);text-align:center;padding:4px;line-height:1.4;}
 .ac-photo img{width:100%;height:100%;object-fit:cover;display:block;}
 .nc-main{min-width:0;}
-.reg-big{font-family:var(--mono);font-size:clamp(20px,2.8vw,38px);font-weight:700;line-height:1;letter-spacing:-.015em;}
+.reg-big{font-family:var(--mono);font-size:clamp(20px,2.8vw,38px);font-weight:700;line-height:1;letter-spacing:-.01em;}
 .tag-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
-.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid var(--line);background:rgba(255,255,255,.025);color:var(--mu2);}
-.tag.live{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.07);color:var(--G);}
-.tag.amb{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.07);color:var(--A);}
-.tag.cyn{border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.07);color:var(--C);}
-.tag.red{border-color:rgba(248,113,113,.42);background:rgba(248,113,113,.09);color:var(--R);animation:sqwarn 1.8s ease-in-out infinite;}
-@keyframes sqwarn{0%,100%{background:rgba(248,113,113,.09)}50%{background:rgba(248,113,113,.22)}}
-.smini{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:7px;margin-top:11px;}
-.sm .k{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;color:var(--mu);margin-bottom:2px;}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:700;border:1px solid var(--line);background:rgba(255,255,255,.025);color:var(--mu2);font-family:var(--mono);letter-spacing:.04em;}
+.tag.live{border-color:rgba(30,200,120,.3);background:rgba(30,200,120,.07);color:var(--G);}
+.tag.amb{border-color:rgba(232,160,32,.3);background:rgba(232,160,32,.07);color:var(--A);}
+.tag.cyn{border-color:rgba(34,180,240,.3);background:rgba(34,180,240,.07);color:var(--C);}
+.tag.red{border-color:rgba(232,72,72,.4);background:rgba(232,72,72,.09);color:var(--R);animation:sqwarn 1.8s ease-in-out infinite;}
+@keyframes sqwarn{0%,100%{background:rgba(232,72,72,.09)}50%{background:rgba(232,72,72,.22)}}
+
+/* ── CATEGORY BADGES ── */
+.cat{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:4px;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+}
+.cat-heavy{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.28);color:var(--ch);}
+.cat-airline{background:rgba(56,189,248,.09);border:1px solid rgba(56,189,248,.26);color:var(--ca);}
+.cat-bizjet{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.26);color:var(--cb);}
+.cat-ga{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.26);color:var(--cg);}
+.cat-rotorcraft{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.26);color:var(--cr);}
+.cat-military{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--cm);}
+.cat-unknown{background:rgba(136,153,187,.08);border:1px solid rgba(136,153,187,.22);color:var(--cx);}
+
+.smini{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;margin-top:11px;}
+.sm{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;}
+.sm .k{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--mu);margin-bottom:2px;font-family:var(--mono);}
 .sm .v{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--tx);}
 .sm .v.live{color:var(--G);}.sm .v.amb{color:var(--A);}
-/* ROUTE COL */
+
+/* ── ROUTE COL ── */
 .route-col{width:210px;flex-shrink:0;}
 .rbox{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;}
 .raps{display:flex;align-items:flex-start;gap:5px;}
@@ -104,63 +138,84 @@ body{
 .rap-n{font-size:10px;color:var(--mu2);line-height:1.35;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rarr{display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:3px;flex-shrink:0;}
 .rpct{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--A);}
-.pbar{height:5px;border-radius:999px;background:rgba(148,163,184,.13);overflow:hidden;margin:9px 0 5px;}
+.pbar{height:4px;border-radius:999px;background:rgba(148,163,184,.12);overflow:hidden;margin:9px 0 5px;}
 .pfil{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--C),var(--A),var(--R));transition:width .7s ease;}
 .pmeta{display:flex;justify-content:space-between;font-size:10px;color:var(--mu2);font-family:var(--mono);}
 .rnone{font-size:11px;color:var(--mu);text-align:center;padding:10px 0;line-height:1.6;}
-/* MAIN GRID */
+
+/* ── MAIN GRID ── */
 .main-grid{display:grid;grid-template-columns:1fr 330px;gap:13px;align-items:start;}
 .map-card{padding:13px;}
 .map-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
-.map-title{font-size:14px;font-weight:800;letter-spacing:-.02em;}
-.live-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--G);}
+.map-title{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-family:var(--mono);color:var(--mu2);}
+.map-title span{color:var(--tx);}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--G);font-family:var(--mono);}
 #map{height:70vh;min-height:500px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--line);}
-.map-leg{display:flex;flex-wrap:wrap;gap:10px;margin-top:9px;font-size:11px;color:var(--mu2);align-items:center;}
+.map-leg{display:flex;flex-wrap:wrap;gap:10px;margin-top:9px;font-size:10px;color:var(--mu2);align-items:center;font-family:var(--mono);}
 .mleg{display:flex;align-items:center;gap:5px;}
 .mleg-line{width:20px;height:3px;border-radius:2px;background:linear-gradient(90deg,var(--C),var(--A),var(--R));}
 .mleg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-/* SIDEBAR */
+
+/* ── SIDEBAR ── */
 .sidebar{display:grid;gap:13px;}
-.plabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--mu2);margin-bottom:11px;}
+.plabel{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:var(--mu2);margin-bottom:11px;font-family:var(--mono);}
 .phead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px;}
-.spill{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--A);background:rgba(245,158,11,.09);border:1px solid rgba(245,158,11,.22);border-radius:999px;padding:3px 10px;}
+.spill{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--A);background:rgba(232,160,32,.08);border:1px solid rgba(232,160,32,.22);border-radius:5px;padding:3px 10px;}
 .cp{padding:16px;}
-.dtbl{display:grid;gap:4px;}
-.drow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 10px;background:var(--panel2);border-radius:8px;border:1px solid var(--line);font-size:12px;}
-.dk{color:var(--mu2);font-weight:500;flex-shrink:0;}
+.dtbl{display:grid;gap:3px;}
+.drow{
+  display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  padding:5px 9px;background:var(--panel2);border-radius:6px;
+  border:1px solid var(--line);font-size:12px;
+  border-left:2px solid var(--line);
+}
+.drow:hover{border-left-color:var(--line2);}
+.dk{color:var(--mu2);font-weight:600;flex-shrink:0;font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono);}
 .dv{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--tx);text-align:right;word-break:break-all;}
 .dv.live{color:var(--G);}.dv.amb{color:var(--A);}.dv.red{color:var(--R);}
-.sph{height:110px;border-radius:9px;overflow:hidden;border:1px solid var(--line);margin-bottom:11px;}
+.sph{height:110px;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin-bottom:11px;}
 .sph img{width:100%;height:100%;object-fit:cover;display:block;}
-.nb-list{display:grid;gap:6px;margin-top:10px;}
-.nb-btn{width:100%;text-align:left;border:none;cursor:pointer;padding:9px 12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--tx);font-family:var(--font);display:flex;align-items:center;justify-content:space-between;gap:8px;transition:border-color .14s,background .14s;}
-.nb-btn:hover{border-color:var(--line2);}
-.nb-btn.active{border-color:var(--A);background:rgba(245,158,11,.04);}
+.nb-list{display:grid;gap:5px;margin-top:10px;}
+.nb-btn{
+  width:100%;text-align:left;border:none;cursor:pointer;
+  padding:8px 11px;border-radius:8px;
+  background:var(--panel2);border:1px solid var(--line);
+  color:var(--tx);font-family:var(--font);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  transition:border-color .14s,background .14s;
+  border-left:2px solid transparent;
+}
+.nb-btn:hover{border-color:var(--line2);border-left-color:var(--line2);}
+.nb-btn.active{border-color:rgba(232,160,32,.38);border-left-color:var(--A);background:rgba(232,160,32,.04);}
 .nb-l{min-width:0;}
-.nb-reg{font-family:var(--mono);font-weight:700;font-size:13px;}
-.nb-meta{font-size:11px;color:var(--mu2);margin-top:1px;line-height:1.4;}
-.nb-dist{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--mu2);flex-shrink:0;}
+.nb-reg{font-family:var(--mono);font-weight:700;font-size:13px;line-height:1.2;}
+.nb-meta{font-size:10px;color:var(--mu2);margin-top:2px;line-height:1.4;font-family:var(--mono);}
+.nb-r{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
+.nb-dist{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--mu2);}
 .nb-sq{color:var(--R);font-weight:700;}
-.empty{border:1px dashed rgba(68,90,136,.26);border-radius:11px;padding:18px;text-align:center;color:var(--mu2);font-size:12px;line-height:1.65;}
-/* LEAFLET */
+.empty{border:1px dashed rgba(60,84,136,.24);border-radius:10px;padding:18px;text-align:center;color:var(--mu2);font-size:12px;line-height:1.65;font-family:var(--mono);}
+
+/* ── LEAFLET ── */
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{
-  background:rgba(8,12,26,.97)!important;color:var(--tx)!important;
-  border:1px solid var(--line2)!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;border-radius:12px!important;
+  background:rgba(7,11,24,.97)!important;color:var(--tx)!important;
+  border:1px solid var(--line2)!important;box-shadow:0 8px 32px rgba(0,0,0,.75)!important;border-radius:10px!important;
 }
 @media(prefers-color-scheme:light){.leaflet-popup-content-wrapper,.leaflet-popup-tip{
-  background:rgba(255,255,255,.98)!important;color:#0d1828!important;
-  border-color:rgba(96,136,200,.38)!important;box-shadow:0 8px 32px rgba(10,22,58,.18)!important;
+  background:rgba(255,255,255,.98)!important;color:#081728!important;
+  border-color:rgba(80,124,192,.36)!important;box-shadow:0 8px 32px rgba(10,22,58,.18)!important;
 }}
-.leaflet-popup-content{margin:11px 14px!important;min-width:130px;}
-.pp-reg{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--A);margin-bottom:5px;}
-.pp-row{font-size:12px;color:var(--mu2);line-height:1.7;}
+.leaflet-popup-content{margin:11px 14px!important;min-width:140px;}
+.pp-reg{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--A);margin-bottom:4px;letter-spacing:-.01em;}
+.pp-row{font-size:12px;color:var(--mu2);line-height:1.7;font-family:var(--mono);}
 .pp-row b{color:var(--tx);font-weight:600;}
-@media(prefers-color-scheme:light){.pp-reg{color:#d97706;}.pp-row{color:#566480;}.pp-row b{color:#0d1828;}}
-.pp-btn{margin-top:8px;width:100%;display:block;text-align:center;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.26);color:var(--A);border-radius:7px;padding:5px 10px;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:700;}
-.pp-btn:hover{background:rgba(245,158,11,.2);}
-@media(prefers-color-scheme:light){.pp-btn{color:#d97706;border-color:rgba(217,119,6,.26);background:rgba(245,158,11,.05);}}
-.user-dot{width:11px;height:11px;border-radius:50%;background:var(--C);border:2px solid white;box-shadow:0 0 0 5px rgba(56,189,248,.18),0 2px 8px rgba(0,0,0,.4);}
-/* RESPONSIVE */
+@media(prefers-color-scheme:light){.pp-reg{color:#c87a10;}.pp-row{color:#506080;}.pp-row b{color:#081728;}}
+.pp-cat{display:inline-block;margin-bottom:6px;}
+.pp-btn{margin-top:8px;width:100%;display:block;text-align:center;background:rgba(232,160,32,.09);border:1px solid rgba(232,160,32,.24);color:var(--A);border-radius:6px;padding:5px 10px;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700;}
+.pp-btn:hover{background:rgba(232,160,32,.18);}
+@media(prefers-color-scheme:light){.pp-btn{color:#c87a10;border-color:rgba(200,120,16,.26);background:rgba(232,160,32,.05);}}
+.user-dot{width:11px;height:11px;border-radius:50%;background:var(--C);border:2px solid white;box-shadow:0 0 0 5px rgba(34,180,240,.18),0 2px 8px rgba(0,0,0,.4);}
+
+/* ── RESPONSIVE ── */
 @media(max-width:1100px){.main-grid{grid-template-columns:1fr;}#map{height:56vh;min-height:420px;}}
 @media(max-width:820px){.nc-body{grid-template-columns:1fr;}.route-col{width:100%;}.ac-photo{width:100%;height:130px;}}
 @media(max-width:540px){.wrap{padding:10px 10px 26px;}.nav{padding:0 12px;}.nearest{padding:13px;}.smini{grid-template-columns:repeat(3,1fr);}}
@@ -178,11 +233,12 @@ body{
     Overhead
   </div>
   <div class="nav-div"></div>
-  <span class="nav-sub">Aircraft Near Me</span>
+  <span class="nav-sub">ADS-B · LIVE TRAFFIC</span>
+  <span class="nav-mode">SURVEILLANCE</span>
   <div class="nav-r">
     <div class="sp" id="sPill">
       <span class="sd warn" id="sDot"></span>
-      <span id="sText">Locating&hellip;</span>
+      <span id="sText">LOCATING&hellip;</span>
     </div>
   </div>
 </nav>
@@ -194,40 +250,40 @@ body{
   <div class="main-grid">
     <div class="card map-card">
       <div class="map-head">
-        <div class="map-title">Live Radar</div>
+        <div class="map-title"><span>RADAR</span> · LIVE DISPLAY</div>
         <div class="live-badge">
           <span class="sd" style="animation:blink 2.8s ease-in-out infinite;flex-shrink:0"></span>
-          <span id="trafficCount">Scanning</span>
+          <span id="trafficCount">SCANNING</span>
         </div>
       </div>
       <div id="map"></div>
       <div class="map-leg">
-        <div class="mleg"><div class="mleg-dot" style="background:var(--C)"></div>You</div>
-        <div class="mleg"><div class="mleg-dot" style="background:var(--G)"></div>Aircraft</div>
-        <div class="mleg"><div class="mleg-line"></div>Trail (speed &amp; alt)</div>
+        <div class="mleg"><div class="mleg-dot" style="background:var(--C)"></div>YOU</div>
+        <div class="mleg"><div class="mleg-dot" style="background:var(--G)"></div>ACFT</div>
+        <div class="mleg"><div class="mleg-line"></div>TRAIL</div>
         <div class="mleg" style="gap:4px">
-          Alt:
+          ALT:
           <div class="mleg-dot" style="background:#6b7280;margin-left:2px"></div>
-          <div class="mleg-dot" style="background:#f59e0b"></div>
-          <div class="mleg-dot" style="background:#34d399"></div>
-          <div class="mleg-dot" style="background:#38bdf8"></div>
+          <div class="mleg-dot" style="background:var(--A)"></div>
+          <div class="mleg-dot" style="background:var(--G)"></div>
+          <div class="mleg-dot" style="background:var(--C)"></div>
           <div class="mleg-dot" style="background:#a78bfa"></div>
         </div>
-        <div class="mleg" style="gap:4px;color:var(--mu)">Pan map to load more</div>
+        <div class="mleg" style="color:var(--mu)">PAN TO LOAD MORE</div>
       </div>
     </div>
     <aside class="sidebar">
       <div class="card cp">
         <div class="phead">
-          <div class="plabel">Selected Aircraft</div>
-          <div class="spill" id="selPill">None</div>
+          <div class="plabel">◈ Selected Aircraft</div>
+          <div class="spill" id="selPill">NONE</div>
         </div>
         <div id="selCard"><div class="empty">Tap any aircraft on the map or list.</div></div>
       </div>
       <div class="card cp">
         <div class="phead" style="margin-bottom:5px">
-          <div class="plabel">Nearby Traffic</div>
-          <span style="font-size:11px;color:var(--mu2)">Tap to inspect</span>
+          <div class="plabel">◈ Nearby Traffic</div>
+          <span style="font-size:10px;color:var(--mu2);font-family:var(--mono)">TAP TO INSPECT</span>
         </div>
         <div id="nbList" class="nb-list"><div class="empty">Waiting for data&hellip;</div></div>
       </div>
@@ -243,22 +299,22 @@ body{
 /* ── CONSTANTS ── */
 const API='https://api.airplanes.live';
 const DB='https://api.adsbdb.com/v0';
-const USER_RANGE=150; /* NM around user for the nearby list */
+const USER_RANGE=150;
 const REFRESH_MS=8000;
 const PAN_DEBOUNCE=900;
 const MAX_HIST=24;
-const MIN_REFETCH_NM=40; /* don't re-pan-fetch if center moved <40 NM */
+const MIN_REFETCH_NM=40;
 
 /* ── STATE ── */
 const S={
   map:null,userLayer:null,planeLayer:null,trailLayer:null,ringLayer:null,tileLayer:null,
   user:null,
-  nearby:[],            /* sorted by dist from user – for sidebar list */
-  allAC:new Map(),      /* all aircraft seen – for full map render */
+  nearby:[],
+  allAC:new Map(),
   selectedKey:null,selectedInfo:null,
   histories:new Map(),
   didInitialFit:false,refreshTimer:null,panTimer:null,
-  panLat:null,panLon:null,  /* last map-pan fetch center */
+  panLat:null,panLon:null,
 };
 
 /* ── UTILS ── */
@@ -276,24 +332,24 @@ const nmBtw=(a,b)=>hav(a[0],a[1],b[0],b[1])/1.852;
 /* ── FORMATTERS ── */
 const fmtAlt=ac=>{
   const v=ac?.alt_baro??ac?.altitude??ac?.alt;
-  if(v==null||v==='')return'—';
-  if(String(v).toLowerCase()==='ground')return'Ground';
+  if(v==null||v==='')return'\u2014';
+  if(String(v).toLowerCase()==='ground')return'GND';
   const n=Number(v);return isNaN(n)?String(v):`${n.toLocaleString()} ft`;
 };
-const fmtSpd=ac=>{const v=pickN(ac?.gs,ac?.speed,ac?.ground_speed);return v==null?'—':`${Math.round(v)} kt`;};
-const fmtCoords=(la,lo)=>la==null||lo==null?'—':`${la.toFixed(4)}, ${lo.toFixed(4)}`;
+const fmtSpd=ac=>{const v=pickN(ac?.gs,ac?.speed,ac?.ground_speed);return v==null?'\u2014':`${Math.round(v)} kt`;};
+const fmtCoords=(la,lo)=>la==null||lo==null?'\u2014':`${la.toFixed(4)}, ${lo.toFixed(4)}`;
 const fmtAgo=v=>{
-  if(v==null||v==='')return'—';const n=Number(v);if(isNaN(n))return String(v);
+  if(v==null||v==='')return'\u2014';const n=Number(v);if(isNaN(n))return String(v);
   if(n<60)return`${Math.round(n)}s ago`;if(n<3600)return`${Math.round(n/60)}m ago`;return`${Math.round(n/3600)}h ago`;
 };
 const fmtTrack=ac=>{
-  const t=pickN(ac?.track,ac?.mag_heading,ac?.true_heading);if(t==null)return'—';
+  const t=pickN(ac?.track,ac?.mag_heading,ac?.true_heading);if(t==null)return'\u2014';
   const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   const d=((t%360)+360)%360;return`${Math.round(d)}\u00b0 ${dirs[Math.round(d/22.5)%16]}`;
 };
 const fmtClimb=ac=>{
   const r=pickN(ac?.baro_rate,ac?.geom_rate,ac?.vertical_rate);
-  if(r==null)return'—';if(Math.abs(r)<64)return'Level';
+  if(r==null)return'\u2014';if(Math.abs(r)<64)return'LVL';
   return`${r>0?'\u2191':'\u2193'} ${Math.abs(Math.round(r)).toLocaleString()} fpm`;
 };
 const isAirborne=ac=>{
@@ -310,192 +366,187 @@ function sqInfo(raw){
   return{code:s,label:SQ[parseInt(s)]||null,alert:s==='7500'||s==='7700'};
 }
 
-/* ── AIRCRAFT TYPE CLASSIFICATION ──────────────────────────────────────────
-   Uses the ADS-B emitter category field FIRST (most reliable when present),
-   then falls back to ICAO type-code regex matching.
-   
-   Category codes from airplanes.live:
-     A1=Light(<15500lb)  A2=Small  A3=Large  A4=HighVortex  A5=Heavy
-     A6=HighPerf  A7=ROTORCRAFT  B1=Glider  B2=Balloon
-     B4=Ultralight  C1=LandVehicle
-   ─────────────────────────────────────────────────────────────────────── */
+/* ── AIRCRAFT TYPE CLASSIFICATION ────────────────────────────────────────── */
 function classifyAC(raw){
   const cat=String(raw?.category||'').toUpperCase().trim();
   const t=String(raw?.t||raw?.type||'').toUpperCase().replace(/[-\s]/g,'');
 
-  /* Category-based – authoritative */
   if(cat==='A7')return'heli';
   if(cat==='B1')return'glider';
   if(cat==='B4')return'ultralight';
 
   if(!t)return'def';
 
-  /* ── HELICOPTERS ── comprehensive ICAO type code list
-     The previous impl missed most helis because it relied on category alone.
-     We now match every common rotorcraft code. */
   if(
-    /* Airbus Helicopters (old EC / AS prefix) */
     /^EC[0-9]/.test(t)||
     /^AS3[0-9]{2}$/.test(t)||/^AS5[0-9]{2}$/.test(t)||
-    /* Airbus Helicopters (new H1xx names: H125,H130,H135,H145,H155,H160,H175) */
     /^H1[0-9]{2}$/.test(t)||
-    /* Robinson – R22, R44, R66 */
     /^R(22|44|66)$/.test(t)||
-    /* Sikorsky – S61,S70,S76,S92 etc. (NOT S2T turboprop!) */
     /^S(61|70|76|92)$/.test(t)||
     /^UH[0-9]{1,2}[A-Z]?$/.test(t)||/^HH[0-9]{1,2}$/.test(t)||
     /^SH[0-9]{1,2}$/.test(t)||
-    /* Leonardo/AgustaWestland – AW109,AW119,AW139,AW169,AW189 */
     /^AW[0-9]{3}$/.test(t)||/^A(109|119|129|139|169|189)$/.test(t)||
-    /* Bell (B0x = B206 family, B1x = B212/214, B47=old Bell 47) */
     /^B0[4-9]$/.test(t)||/^B4[0-9]$/.test(t)||/^B47$/.test(t)||
     /^(B212|B214|B222|B230|B430|B429|B412|B427)$/.test(t)||
-    /* Military rotorcraft */
     /^CH[34567][0-9]$/.test(t)||
     /^MH[0-9]{1,2}$/.test(t)||/^AH[0-9]{1,2}[A-Z]?$/.test(t)||
     /^OH[0-9]{2}$/.test(t)||/^HX[0-9]/.test(t)||
     /^NH90$/.test(t)||/^VH60$/.test(t)||
-    /* MD Helicopters – MD500,MD520,MD530,MD600,MD902 (NOT MD80/90 jets!) */
     /^MD[5-9][0-9]{2}$/.test(t)||
-    /* Mil/Kamov (Russian) */
     /^MI[0-9]{1,2}[A-Z]?$/.test(t)||/^KA[0-9]{2}$/.test(t)||
-    /* Misc */
     /^KMAX$/.test(t)||/^HELI$/.test(t)||/^GYRO$/.test(t)||/^ROTO$/.test(t)
   )return'heli';
 
-  /* ── WIDE-BODY JETS ── */
   if(/^(B74[2-9S]|B748|B77[23LW]|B77X|B78[789X]|A33[02-9]|A340|A34[259]|A35[06K]|A38[0-9F]|MD11|DC10|L101)/.test(t))return'wide';
-
-  /* ── NARROW-BODY JETS ── */
   if(/^(B73[5-9GHIJ]|B38M|B39M|A31[89]|A32[012FMNO]|A318|A319|A320|A321|MD8[0-9]|MD9[012]|DC9|B712|B722|B752|B753|E19[05]|BCS[123]|CS[13])/.test(t))return'narrow';
-
-  /* ── BUSINESS JETS ── */
   if(/^(C25[0-9ABCM]|C5[126][0-9]|C56X|C650|C68[0A]|C700|C750|GL[456-9]|GLEX|G[23456][0-9]{2}|G280|G700|GALX|LJ[0-9]{2}|FA[2-9][0-9]|FA7X|FA8X|F2TH|PC24|CL[36][0-9]|CL60|H25[0-9ABC]|E50P|E55P|PRM1|SBRL|WW[234][0-9]|ASTR|HA4T|GAL[FX])/.test(t))return'bizjet';
-
-  /* ── REGIONAL JETS & TURBOFANS ── */
   if(/^(CRJ[1279X]|E1[34][0-9]|E145|E170|E175|ERJ|AT[457][0-9]|AT7[56])/.test(t))return'regional';
-
-  /* ── TURBOPROPS ── */
   if(/^(DH8[ABCD]|DHC[678]|Q[234][0-9]|SF3[24]|SB20|BE[23][0-9]|PC12|PC[67]|C212|BN2|JS[34][0-9]|L410|AN[0-9]{1,2}|DO[0-9]{2}|TP14|CN[23][0-9]|PAC7|KODE)/.test(t))return'turboprop';
-
-  /* ── PISTON TWINS ── */
   if(/^(BE5[5-9]|BE58|BE76|PA[23][134]|PA44|C30[2-9]|C31[0-9]|C33[0-9]|C34[02]|C40[2-9]|C41[0-9]|C42[015]|V35|TW[0-9])/.test(t))return'piston-twin';
-
-  /* ── PISTON SINGLES ── */
   if(/^(C1[5-9][0-9]|C172|C150|C152|C162|C177|C180|C182|C185|PA18|PA22|PA24|PA28|P28[ABT]|DA20|DA40|SR20|SR22|RV[3-9]|RV10|CTLS|CT2K|DIMO|JABI|MOSE)/.test(t))return'piston-single';
-
-  /* ── GLIDERS ── */
   if(/^(ASK|ASG|ASH|ASW|LS[0-9]|SZD|DG[0-9]{2}|PIK|DISC|NIMB|VENT|PW[56]|K8|K13|K21|GLAS|BLAN)/.test(t))return'glider';
-
-  /* ── ULTRALIGHT / MICROLIGHT ── */
   if(/^(ULAC|ULTR|MOTO|FOUR|JABIRU|EURO|IKARUS|SSEA|A22)/.test(t))return'ultralight';
-
-  /* ── MILITARY JETS ── */
   if(/^(F1[5-8][A-Z]?|F22|F35[ABC]?|B52|B2[A]?|B21|C130|C17A|C5M|P8[A]?|KC[13][0-9]|A10|E3[TF]|U2|SR71|AV8|HARR|VIPA|HAWK|TICO|ALPH)/.test(t))return'military';
 
   return'def';
 }
 
+/* ── CATEGORY METADATA ──────────────────────────────────────────────────── */
+function acCategory(kind){
+  const M={
+    wide:          {label:'HEAVY',       cls:'cat-heavy'},
+    narrow:        {label:'AIRLINE',     cls:'cat-airline'},
+    bizjet:        {label:'BIZJET',      cls:'cat-bizjet'},
+    regional:      {label:'REGIONAL',    cls:'cat-airline'},
+    turboprop:     {label:'TURBOPROP',   cls:'cat-ga'},
+    'piston-single':{label:'GA SINGLE', cls:'cat-ga'},
+    'piston-twin': {label:'GA TWIN',     cls:'cat-ga'},
+    heli:          {label:'HELICOPTER',  cls:'cat-rotorcraft'},
+    military:      {label:'MILITARY',    cls:'cat-military'},
+    glider:        {label:'GLIDER',      cls:'cat-unknown'},
+    ultralight:    {label:'ULTRALIGHT',  cls:'cat-ga'},
+    def:           {label:'AIRCRAFT',    cls:'cat-unknown'},
+  };
+  return M[kind]||M.def;
+}
+
 /* ── SVG SILHOUETTES ──────────────────────────────────────────────────────
-   All viewBox "0 0 32 32". Nose points UP (north = 0°).
-   Aircraft will be CSS-rotated by the live track heading.
+   All viewBox "0 0 32 32". Nose points UP. Rotated by live track heading.
    ─────────────────────────────────────────────────────────────────────── */
 const SHAPES={
 
-  /* WIDE-BODY: thick fuselage, swept wings, 4 visible engine pods */
+  /* HEAVY: 4-engine swept-wing wide-body (B747/B777/A380) */
   wide:c=>`
-    <ellipse cx="16" cy="16" rx="2.2" ry="12" fill="${c}"/>
-    <path fill="${c}" d="M16,7 L30,14.5 L30,16.5 L21,15.5 L22,22 L25.5,24 L25.5,25.5 L16,24.5 L6.5,25.5 L6.5,24 L10,22 L11,15.5 L2,16.5 L2,14.5 Z"/>
-    <ellipse cx="26.5" cy="15" rx="2" ry="0.9" fill="${c}" opacity=".55"/>
-    <ellipse cx="22.5" cy="15.2" rx="1.7" ry="0.8" fill="${c}" opacity=".55"/>
-    <ellipse cx="5.5" cy="15" rx="2" ry="0.9" fill="${c}" opacity=".55"/>
-    <ellipse cx="9.5" cy="15.2" rx="1.7" ry="0.8" fill="${c}" opacity=".55"/>`,
+    <ellipse cx="16" cy="15.5" rx="3" ry="13" fill="${c}"/>
+    <path fill="${c}" d="M13,9 L1.5,16 L1.5,17.5 L12,16 L12.5,22.5 L10,24 L10,25.5 L16,24.5 L22,25.5 L22,24 L19.5,22.5 L20,16 L30.5,17.5 L30.5,16 L19,9 Z"/>
+    <ellipse cx="4.5" cy="16.5" rx="2.1" ry=".95" fill="${c}" opacity=".55"/>
+    <ellipse cx="9.5" cy="16.2" rx="1.8" ry=".85" fill="${c}" opacity=".55"/>
+    <ellipse cx="22.5" cy="16.2" rx="1.8" ry=".85" fill="${c}" opacity=".55"/>
+    <ellipse cx="27.5" cy="16.5" rx="2.1" ry=".95" fill="${c}" opacity=".55"/>
+    <path fill="${c}" d="M13.5,25 L11,27.5 L11,29 L16,28 L21,29 L21,27.5 L18.5,25 Z"/>`,
 
-  /* NARROW-BODY: slim fuselage, swept wings, 1 engine pod per side */
+  /* AIRLINE: 2-engine swept-wing narrowbody (B737/A320) */
   narrow:c=>`
-    <ellipse cx="16" cy="16" rx="1.8" ry="11.5" fill="${c}"/>
-    <path fill="${c}" d="M16,8 L29,15 L29,17 L21,16 L21.5,23 L24.5,24.5 L24.5,26 L16,25 L7.5,26 L7.5,24.5 L10.5,23 L11,16 L3,17 L3,15 Z"/>
-    <ellipse cx="25" cy="15.8" rx="1.8" ry="0.85" fill="${c}" opacity=".6"/>
-    <ellipse cx="7" cy="15.8" rx="1.8" ry="0.85" fill="${c}" opacity=".6"/>`,
+    <ellipse cx="16" cy="15.5" rx="2.3" ry="12" fill="${c}"/>
+    <path fill="${c}" d="M13.8,10 L3,16 L3,17.5 L13.5,16.5 L14,22.5 L11.5,24 L11.5,25.5 L16,24.5 L20.5,25.5 L20.5,24 L18,22.5 L18.5,16.5 L29,17.5 L29,16 L18.2,10 Z"/>
+    <ellipse cx="6.5" cy="16.8" rx="2" ry=".95" fill="${c}" opacity=".6"/>
+    <ellipse cx="25.5" cy="16.8" rx="2" ry=".95" fill="${c}" opacity=".6"/>
+    <path fill="${c}" d="M13.5,26 L11.5,28 L11.5,29.5 L16,28.5 L20.5,29.5 L20.5,28 L18.5,26 Z"/>`,
 
-  /* BUSINESS JET: sleek swept wings, rear-mounted engines, T-tail */
+  /* BIZJET: swept wing, rear-mounted engines, T-tail (Gulfstream/Citation) */
   bizjet:c=>`
-    <ellipse cx="16" cy="16.5" rx="1.5" ry="10.5" fill="${c}"/>
-    <path fill="${c}" d="M16,9 L28,16.5 L28,18 L20,17 L20,23 L23,24.5 L23,26 L16,25 L9,26 L9,24.5 L12,23 L12,17 L4,18 L4,16.5 Z"/>
-    <rect x="12.5" y="26.5" width="7" height="1.5" rx=".75" fill="${c}"/>
-    <ellipse cx="21.5" cy="24.8" rx="1.4" ry="0.7" fill="${c}" opacity=".6"/>
-    <ellipse cx="10.5" cy="24.8" rx="1.4" ry="0.7" fill="${c}" opacity=".6"/>`,
+    <ellipse cx="16" cy="15.5" rx="1.7" ry="11.5" fill="${c}"/>
+    <path fill="${c}" d="M14.5,9.5 L5,15.5 L5,17 L14.5,16 L15,21.5 L13,23 L13,24.5 L16,24 L19,24.5 L19,23 L17,21.5 L17.5,16 L27,17 L27,15.5 L17.5,9.5 Z"/>
+    <ellipse cx="13.5" cy="23.5" rx="1.6" ry=".75" fill="${c}" opacity=".7"/>
+    <ellipse cx="18.5" cy="23.5" rx="1.6" ry=".75" fill="${c}" opacity=".7"/>
+    <path fill="${c}" d="M11.5,25 L9.5,27.5 L9.5,29 L16,27.5 L22.5,29 L22.5,27.5 L20.5,25 Z"/>`,
 
-  /* REGIONAL: compact jets & large turboprops, moderate sweep */
+  /* REGIONAL: compact 2-engine jet (CRJ/E-jet) */
   regional:c=>`
-    <ellipse cx="16" cy="16.5" rx="1.6" ry="10" fill="${c}"/>
-    <path fill="${c}" d="M16,9.5 L27,16 L27,17.5 L20,16.8 L20.5,23 L23,25 L23,26.5 L16,25.5 L9,26.5 L9,25 L11.5,23 L12,16.8 L5,17.5 L5,16 Z"/>`,
+    <ellipse cx="16" cy="15.5" rx="2" ry="10.5" fill="${c}"/>
+    <path fill="${c}" d="M14,10.5 L3.5,16 L3.5,17.5 L13.8,16.8 L14.2,22 L11.5,23.5 L11.5,25 L16,24.5 L20.5,25 L20.5,23.5 L17.8,22 L18.2,16.8 L28.5,17.5 L28.5,16 L18,10.5 Z"/>
+    <ellipse cx="7" cy="17" rx="1.9" ry=".9" fill="${c}" opacity=".6"/>
+    <ellipse cx="25" cy="17" rx="1.9" ry=".9" fill="${c}" opacity=".6"/>
+    <path fill="${c}" d="M13.5,25 L11.5,27.5 L11.5,29 L16,28 L20.5,29 L20.5,27.5 L18.5,25 Z"/>`,
 
-  /* TURBOPROP: straighter wings, visible prop circles */
+  /* TURBOPROP: straight wings, twin engine nacelles + prop arcs (DHC-8/ATR) */
   turboprop:c=>`
-    <ellipse cx="16" cy="16.5" rx="1.5" ry="10" fill="${c}"/>
-    <path fill="${c}" d="M16,9.5 L27.5,15.5 L27.5,17.5 L20,16.5 L20.5,23.5 L23,25 L23,26.5 L16,25.5 L9,26.5 L9,25 L11.5,23.5 L12,16.5 L4.5,17.5 L4.5,15.5 Z"/>
-    <circle cx="27" cy="16.5" r="2.5" fill="none" stroke="${c}" stroke-width="1.1" opacity=".65"/>
-    <circle cx="5" cy="16.5" r="2.5" fill="none" stroke="${c}" stroke-width="1.1" opacity=".65"/>`,
+    <ellipse cx="16" cy="16" rx="2" ry="11.5" fill="${c}"/>
+    <path fill="${c}" d="M14,11 L4,15 L4,17 L14,16 L14.5,22.5 L12,24 L12,25.5 L16,25 L20,25.5 L20,24 L17.5,22.5 L18,16 L28,17 L28,15 L18,11 Z"/>
+    <ellipse cx="6" cy="16" rx="2.6" ry="1.4" fill="${c}"/>
+    <ellipse cx="26" cy="16" rx="2.6" ry="1.4" fill="${c}"/>
+    <ellipse cx="6" cy="12.5" rx="4.2" ry="1.1" fill="none" stroke="${c}" stroke-width="1.3" opacity=".6"/>
+    <ellipse cx="26" cy="12.5" rx="4.2" ry="1.1" fill="none" stroke="${c}" stroke-width="1.3" opacity=".6"/>
+    <path fill="${c}" d="M13.5,25.5 L11.5,27.5 L11.5,29 L16,28 L20.5,29 L20.5,27.5 L18.5,25.5 Z"/>`,
 
-  /* PISTON SINGLE: small, straight wings, single prop disc at nose */
+  /* PISTON SINGLE: straight wing, nose prop disc (C172/PA28) */
   'piston-single':c=>`
-    <ellipse cx="16" cy="17" rx="1.3" ry="9.5" fill="${c}"/>
-    <path fill="${c}" d="M16,11.5 L25,15.5 L25,17 L19,16.5 L19.5,23.5 L21.5,25 L21.5,26.5 L16,25.8 L10.5,26.5 L10.5,25 L12.5,23.5 L13,16.5 L7,17 L7,15.5 Z"/>
-    <circle cx="16" cy="5.5" r="2.8" fill="none" stroke="${c}" stroke-width="1.3" opacity=".7"/>
-    <line x1="13.2" y1="5.5" x2="18.8" y2="5.5" stroke="${c}" stroke-width="1.3" opacity=".7"/>`,
+    <ellipse cx="16" cy="5" rx="4.8" ry="1.2" fill="none" stroke="${c}" stroke-width="1.3" opacity=".75"/>
+    <ellipse cx="16" cy="17.5" rx="1.9" ry="11.5" fill="${c}"/>
+    <path fill="${c}" d="M14.5,14 L4,16.5 L4,18 L14.5,17 L17.5,17 L28,18 L28,16.5 L17.5,14 Z"/>
+    <path fill="${c}" d="M14,26.5 L11.5,28.5 L11.5,30 L16,29 L20.5,30 L20.5,28.5 L18,26.5 Z"/>`,
 
-  /* PISTON TWIN: small, twin prop discs on wings */
+  /* PISTON TWIN: twin wing nacelles + prop arcs (Seneca/C310) */
   'piston-twin':c=>`
-    <ellipse cx="16" cy="17" rx="1.3" ry="9.5" fill="${c}"/>
-    <path fill="${c}" d="M16,10.5 L26.5,15 L26.5,17 L19.5,16.5 L20,23.5 L22.5,25 L22.5,26.5 L16,25.8 L9.5,26.5 L9.5,25 L12,23.5 L12.5,16.5 L5.5,17 L5.5,15 Z"/>
-    <circle cx="26" cy="16" r="2.5" fill="none" stroke="${c}" stroke-width="1.2" opacity=".7"/>
-    <circle cx="6" cy="16" r="2.5" fill="none" stroke="${c}" stroke-width="1.2" opacity=".7"/>`,
+    <ellipse cx="16" cy="17" rx="1.9" ry="11" fill="${c}"/>
+    <path fill="${c}" d="M14.5,13 L5,15.5 L5,17.5 L14.5,16.5 L17.5,16.5 L27,17.5 L27,15.5 L17.5,13 Z"/>
+    <ellipse cx="7.5" cy="16.5" rx="2.4" ry="1.4" fill="${c}"/>
+    <ellipse cx="24.5" cy="16.5" rx="2.4" ry="1.4" fill="${c}"/>
+    <ellipse cx="7.5" cy="13" rx="3.5" ry="1.1" fill="none" stroke="${c}" stroke-width="1.2" opacity=".7"/>
+    <ellipse cx="24.5" cy="13" rx="3.5" ry="1.1" fill="none" stroke="${c}" stroke-width="1.2" opacity=".7"/>
+    <path fill="${c}" d="M14,25.5 L11.5,27.5 L11.5,29 L16,28 L20.5,29 L20.5,27.5 L18,25.5 Z"/>`,
 
-  /* HELICOPTER: rotor blades + disc + teardrop fuselage + tail boom */
+  /* HELICOPTER: main rotor disc + cross blades, oval body, tail boom + tail rotor */
   heli:c=>`
-    <circle cx="16" cy="14" r="10.5" fill="none" stroke="${c}" stroke-width="1" opacity=".35"/>
-    <line x1="3" y1="14" x2="29" y2="14" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
-    <line x1="5.5" y1="6.5" x2="26.5" y2="21.5" stroke="${c}" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
-    <ellipse cx="16" cy="17" rx="3.5" ry="6" fill="${c}"/>
-    <line x1="16" y1="23" x2="22" y2="27" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="20" y1="25.5" x2="25" y2="25.5" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>`,
+    <circle cx="16" cy="13.5" r="10.5" fill="none" stroke="${c}" stroke-width=".9" opacity=".28"/>
+    <line x1="4" y1="13.5" x2="28" y2="13.5" stroke="${c}" stroke-width="2.3" stroke-linecap="round"/>
+    <line x1="16" y1="3" x2="16" y2="24" stroke="${c}" stroke-width="2.3" stroke-linecap="round" opacity=".6"/>
+    <circle cx="16" cy="13.5" r="1.5" fill="${c}"/>
+    <ellipse cx="16" cy="18.5" rx="3.5" ry="5.5" fill="${c}"/>
+    <rect x="15.2" y="23.5" width="1.6" height="5" rx=".8" fill="${c}" opacity=".8"/>
+    <line x1="12" y1="28" x2="20" y2="28" stroke="${c}" stroke-width="1.7" stroke-linecap="round"/>`,
 
-  /* MILITARY: swept delta-ish wing */
+  /* MILITARY: swept delta fighter (F-16 / Typhoon style) */
   military:c=>`
-    <path fill="${c}" d="M16,4 L20,14 L30,18 L26,21 L20,19.5 L19.5,28 L16,30 L12.5,28 L12,19.5 L6,21 L2,18 L12,14 Z"/>`,
+    <path fill="${c}" d="M16,2 L19.5,12 L30,18 L26,21.5 L20,19 L19.5,29.5 L16,31 L12.5,29.5 L12,19 L6,21.5 L2,18 L12.5,12 Z"/>`,
 
-  /* GLIDER: extremely long thin straight wings, no engine */
+  /* GLIDER: extremely long slender wings, minimal fuselage */
   glider:c=>`
-    <ellipse cx="16" cy="17" rx="1.1" ry="9" fill="${c}"/>
-    <path fill="${c}" d="M16,12 L31,16.5 L31,17.5 L16,16.8 L16,16.8 L1,17.5 L1,16.5 Z"/>
-    <path fill="${c}" d="M14,25 L18,25 L17.5,27.5 L14.5,27.5 Z"/>`,
+    <ellipse cx="16" cy="16.5" rx="1.2" ry="9.5" fill="${c}"/>
+    <path fill="${c}" d="M14.8,14 L1,16.5 L1,17.5 L14.8,16.5 L17.2,16.5 L31,17.5 L31,16.5 L17.2,14 Z"/>
+    <path fill="${c}" d="M14.5,23 L13,25.5 L15,26.5 L17,26.5 L19,25.5 L17.5,23 Z"/>`,
 
-  /* ULTRALIGHT: very small, simple shape */
+  /* ULTRALIGHT / MICROLIGHT: very small, high-wing, tiny prop */
   ultralight:c=>`
-    <ellipse cx="16" cy="17" rx="1.1" ry="8.5" fill="${c}"/>
-    <path fill="${c}" d="M16,12.5 L27,15.5 L27,17 L16,16 L5,17 L5,15.5 Z"/>
-    <circle cx="16" cy="7" r="2" fill="none" stroke="${c}" stroke-width="1.2" opacity=".7"/>`,
+    <ellipse cx="16" cy="5.5" rx="3.5" ry=".95" fill="none" stroke="${c}" stroke-width="1.1" opacity=".7"/>
+    <ellipse cx="16" cy="17" rx="1.4" ry="10" fill="${c}"/>
+    <path fill="${c}" d="M14.5,14.5 L5.5,16.5 L5.5,17.5 L14.5,16.5 L17.5,16.5 L26.5,17.5 L26.5,16.5 L17.5,14.5 Z"/>
+    <path fill="${c}" d="M14.5,24.5 L12.5,26.5 L12.5,27.5 L16,26.5 L19.5,27.5 L19.5,26.5 L17.5,24.5 Z"/>`,
 
-  /* DEFAULT: clean generic airliner */
+  /* DEFAULT: generic airliner silhouette */
   def:c=>`
-    <ellipse cx="16" cy="16" rx="1.7" ry="11" fill="${c}"/>
-    <path fill="${c}" d="M16,8 L29,15 L29,17 L21,16 L21.5,23 L24.5,24.5 L24.5,26 L16,25 L7.5,26 L7.5,24.5 L10.5,23 L11,16 L3,17 L3,15 Z"/>`,
+    <ellipse cx="16" cy="15.5" rx="2.2" ry="12" fill="${c}"/>
+    <path fill="${c}" d="M13.8,10 L3,16 L3,17.5 L13.5,16.5 L14,22.5 L11.5,24 L11.5,25.5 L16,24.5 L20.5,25.5 L20.5,24 L18,22.5 L18.5,16.5 L29,17.5 L29,16 L18.2,10 Z"/>
+    <path fill="${c}" d="M13.5,26 L11.5,28 L11.5,29.5 L16,28.5 L20.5,29.5 L20.5,28 L18.5,26 Z"/>`,
 };
 
-/* ── ICON SIZES ── */
-const ISIZES={wide:36,narrow:32,bizjet:28,regional:26,turboprop:26,'piston-single':22,'piston-twin':24,heli:28,military:28,glider:28,ultralight:22,def:30};
+/* ── ICON SIZES (px rendered) — proportional to actual aircraft size ── */
+const ISIZES={
+  wide:40,narrow:34,bizjet:26,regional:28,
+  turboprop:26,'piston-single':20,'piston-twin':22,
+  heli:28,military:26,glider:34,ultralight:19,def:32
+};
 
 /* ── ICON COLOUR: altitude-banded ── */
 function iconColor(raw){
   const a=pickN(raw?.alt_baro,raw?.altitude,raw?.alt);
   const gnd=raw?.on_ground===true||raw?.gnd===true||String(raw?.alt_baro||'').toLowerCase()==='ground';
   if(gnd||a===0)return'#6b7280';
-  if(a==null)return'#34d399';
-  if(a<3000)return'#f59e0b';
+  if(a==null)return'#1ec878';
+  if(a<3000)return'#e8a020';
   if(a<12000)return'#fbbf24';
-  if(a<25000)return'#34d399';
-  if(a<36000)return'#38bdf8';
+  if(a<25000)return'#1ec878';
+  if(a<36000)return'#22b4f0';
   return'#a78bfa';
 }
 
@@ -503,8 +554,8 @@ function iconColor(raw){
 function makeIcon(item,sel=false){
   const kind=classifyAC(item.raw||{});
   const track=pickN(item.raw?.track,item.raw?.mag_heading,item.raw?.true_heading)||0;
-  const color=sel?'#f59e0b':iconColor(item.raw||{});
-  const glow=sel?'filter:drop-shadow(0 0 6px rgba(245,158,11,.95))':'';
+  const color=sel?'#e8a020':iconColor(item.raw||{});
+  const glow=sel?'filter:drop-shadow(0 0 6px rgba(232,160,32,.95))':'';
   const sz=ISIZES[kind]||30;
   const body=(SHAPES[kind]||SHAPES.def)(color);
   const h=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${sz}" height="${sz}" style="transform:rotate(${track}deg);display:block;${glow}">${body}</svg>`;
@@ -521,7 +572,7 @@ function trailCol(spd,alt){
 
 /* ── STATUS ── */
 function setStatus(txt,tone='live'){
-  el('sText').textContent=txt;
+  el('sText').textContent=txt.toUpperCase();
   const d=el('sDot');
   d.className='sd'+(tone==='warn'?' warn':tone==='bad'?' bad':'');
   el('sPill').style.color=tone==='live'?'var(--G)':tone==='warn'?'var(--A)':'var(--R)';
@@ -541,7 +592,6 @@ function ensureMap(){
   S.trailLayer=L.layerGroup().addTo(S.map);
   S.planeLayer=L.layerGroup().addTo(S.map);
   S.userLayer=L.layerGroup().addTo(S.map);
-  /* Pan / zoom → load aircraft for new view */
   S.map.on('moveend',()=>{
     clearTimeout(S.panTimer);
     S.panTimer=setTimeout(fetchForView,PAN_DEBOUNCE);
@@ -557,17 +607,15 @@ if(window.matchMedia){const mq=window.matchMedia('(prefers-color-scheme: dark)')
 
 function drawRings(la,lo){
   S.ringLayer.clearLayers();
-  [50,100,150].forEach(nm=>L.circle([la,lo],{radius:nm*1852,color:'rgba(56,189,248,.08)',fill:false,weight:1,dashArray:'4 8'}).addTo(S.ringLayer));
+  [50,100,150].forEach(nm=>L.circle([la,lo],{radius:nm*1852,color:'rgba(34,180,240,.07)',fill:false,weight:1,dashArray:'3 7'}).addTo(S.ringLayer));
 }
 
 /* ── PAN FETCH ── */
 async function fetchForView(){
   if(!S.map)return;
   const c=S.map.getCenter();
-  /* Skip if we haven't moved enough from last pan-fetch center */
   if(S.panLat!=null&&hav(c.lat,c.lng,S.panLat,S.panLon)/1.852<MIN_REFETCH_NM)return;
   S.panLat=c.lat;S.panLon=c.lng;
-  /* Radius: distance from center to corner of visible bounds + 10 NM padding */
   const b=S.map.getBounds(),ne=b.getNorthEast();
   const radiusNm=Math.min(Math.ceil(hav(c.lat,c.lng,ne.lat,ne.lng)/1.852)+10,250);
   try{
@@ -575,11 +623,11 @@ async function fetchForView(){
     const aircraft=pl?.ac||pl?.aircraft||[];
     mergeAircraft(aircraft,false);
     renderPlaneLayer();
-    el('trafficCount').textContent=`${S.allAC.size} aircraft`;
+    el('trafficCount').textContent=`${S.allAC.size} ACFT`;
   }catch(_){}
 }
 
-/* ── MERGE AIRCRAFT INTO allAC ── */
+/* ── MERGE AIRCRAFT ── */
 function mergeAircraft(aircraft,isUserQuery){
   const now=Date.now();
   for(const ac of aircraft){
@@ -599,7 +647,6 @@ function mergeAircraft(aircraft,isUserQuery){
     S.allAC.set(key,item);
     addHist(item);
   }
-  /* Rebuild nearby from allAC if this was the user query */
   if(isUserQuery&&S.user){
     S.nearby=Array.from(S.allAC.values())
       .filter(i=>i.distKm<USER_RANGE*1.852)
@@ -620,7 +667,7 @@ function addHist(item){
   }
 }
 
-/* ── ROUTE PROGRESS (haversine-based, no projection errors) ── */
+/* ── ROUTE PROGRESS ── */
 function routeProg(route,live){
   const o=route?.origin,d=route?.destination;
   const lat=pickN(live?.lat,live?.latitude),lon=pickN(live?.lon,live?.longitude);
@@ -640,7 +687,7 @@ const fmtETA=eta=>eta?eta.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'
 
 /* ── ROUTE HTML ── */
 function routeHtml(route,live){
-  if(!route)return`<div class="rnone">No route data for this flight</div>`;
+  if(!route)return`<div class="rnone">No route data</div>`;
   const o=route.origin,d=route.destination;
   const oC=o?(o.iata_code||o.icao_code||'?'):'?';
   const dC=d?(d.iata_code||d.icao_code||'?'):'?';
@@ -664,20 +711,23 @@ function routeHtml(route,live){
 
 /* ── POPUP ── */
 function buildPopup(item){
+  const kind=classifyAC(item.raw||{});
+  const{label,cls}=acCategory(kind);
   const type=item.raw?.t||item.raw?.type||item.meta?.icao_type||'\u2014';
   const cs=norm(item.raw?.flight||item.raw?.callsign||item.callsign);
   const sq=sqInfo(item.raw?.squawk);
   const sqH=sq?` &middot; <b style="color:${sq.alert?'var(--R)':'var(--A)'}">${sq.code}${sq.label?` (${sq.label})`:''}</b>`:'';
   const dist=item.distNm&&isFinite(item.distNm)?`${item.distNm.toFixed(1)}\u202fNM`:'';
   return`<div class="pp-reg">${item.reg||item.hex||'Aircraft'}</div>
+<div class="pp-cat"><span class="cat ${cls}">${label}</span></div>
 <div class="pp-row"><b>${cs||'No callsign'}</b>${sqH}<br>
 ${type}${dist?' \u00b7 '+dist:''}<br>
 ${fmtAlt(item.raw)} &middot; ${fmtSpd(item.raw)}<br>
 ${fmtTrack(item.raw)}</div>
-<button class="pp-btn" onclick="window.__sel('${item.key}');this.closest('.leaflet-popup').remove()">Inspect \u2192</button>`;
+<button class="pp-btn" onclick="window.__sel('${item.key}');this.closest('.leaflet-popup').remove()">INSPECT \u2192</button>`;
 }
 
-/* ── RENDER PLANE LAYER ONLY (fast, no trail rebuild) ── */
+/* ── RENDER PLANE LAYER ── */
 function renderPlaneLayer(){
   if(!S.map)return;
   S.planeLayer.clearLayers();
@@ -689,7 +739,7 @@ function renderPlaneLayer(){
   }
 }
 
-/* ── FULL MAP RENDER (trails + planes + user) ── */
+/* ── FULL MAP RENDER ── */
 function renderMap(){
   ensureMap();
   S.userLayer.clearLayers();
@@ -697,7 +747,7 @@ function renderMap(){
   if(S.user){
     L.marker([S.user.lat,S.user.lon],{icon:makeUserIcon()})
       .addTo(S.userLayer)
-      .bindPopup(`<div class="pp-reg">\u{1F4CD} You</div><div class="pp-row">${fmtCoords(S.user.lat,S.user.lon)}</div>`);
+      .bindPopup(`<div class="pp-reg">\u{1F4CD} YOU</div><div class="pp-row">${fmtCoords(S.user.lat,S.user.lon)}</div>`);
   }
   for(const[key,pts]of S.histories.entries()){
     if(pts.length<2)continue;
@@ -732,27 +782,33 @@ function makeNearestHtml(item){
   const dist=item.distNm?.toFixed(1)||'\u2014';
   const sq=sqInfo(live.squawk||item.raw?.squawk);
   const air=isAirborne(live);
-  return`<div class="nc-ey">Nearest aircraft &middot; ${dist}\u202fNM from you</div>
+  const kind=classifyAC(live);
+  const{label,cls}=acCategory(kind);
+  return`<div class="nc-ey">PRIMARY TARGET &middot; NEAREST &middot; ${dist}\u202fNM</div>
 <div class="nc-body">
-  <div class="ac-photo">${photo?`<img src="${photo}" alt="">`:'No photo'}</div>
+  <div class="ac-photo">${photo?`<img src="${photo}" alt="">`:'NO PHOTO'}</div>
   <div class="nc-main">
     <div class="reg-big">${reg}</div>
     <div class="tag-row">
+      <span class="cat ${cls}">${label}</span>
       ${cs?`<span class="tag cyn">${cs}</span>`:''}
       ${type?`<span class="tag">${type}</span>`:''}
       ${sq?`<span class="tag ${sq.alert?'red':'amb'}">${sq.code}${sq.label?` &middot; ${sq.label}`:''}</span>`:''}
       ${owner?`<span class="tag">${owner}</span>`:''}
     </div>
     <div class="smini">
-      <div class="sm"><div class="k">Altitude</div><div class="v ${air?'live':''}">${fmtAlt(live)}</div></div>
-      <div class="sm"><div class="k">Speed</div><div class="v">${fmtSpd(live)}</div></div>
-      <div class="sm"><div class="k">Track</div><div class="v">${fmtTrack(live)}</div></div>
-      <div class="sm"><div class="k">Climb</div><div class="v">${fmtClimb(live)}</div></div>
-      <div class="sm"><div class="k">Position</div><div class="v">${fmtCoords(pickN(live.lat,live.latitude),pickN(live.lon,live.longitude))}</div></div>
-      <div class="sm"><div class="k">Last seen</div><div class="v">${fmtAgo(live.seen??live.seen_pos)}</div></div>
+      <div class="sm"><div class="k">ALT</div><div class="v ${air?'live':''}">${fmtAlt(live)}</div></div>
+      <div class="sm"><div class="k">G/S</div><div class="v">${fmtSpd(live)}</div></div>
+      <div class="sm"><div class="k">TRK</div><div class="v">${fmtTrack(live)}</div></div>
+      <div class="sm"><div class="k">V/S</div><div class="v">${fmtClimb(live)}</div></div>
+      <div class="sm"><div class="k">POSN</div><div class="v">${fmtCoords(pickN(live.lat,live.latitude),pickN(live.lon,live.longitude))}</div></div>
+      <div class="sm"><div class="k">UPDT</div><div class="v">${fmtAgo(live.seen??live.seen_pos)}</div></div>
     </div>
   </div>
-  <div class="route-col"><div class="rbox">${routeHtml(route,live)}</div></div>
+  <div class="route-col"><div class="rbox">
+    <div style="font-size:8px;text-transform:uppercase;letter-spacing:.16em;font-weight:700;color:var(--mu2);margin-bottom:9px;font-family:var(--mono)">FLIGHT ROUTE</div>
+    ${routeHtml(route,live)}
+  </div></div>
 </div>`;
 }
 
@@ -766,25 +822,25 @@ function makeSelectedHtml(item){
   const sq=sqInfo(live.squawk||item.raw?.squawk);
   const air=isAirborne(live);
   const rows=[
-    ['Reg',reg,'amb'],
-    cs?['Callsign',cs,'live']:null,
-    sq?['Squawk',`${sq.code}${sq.label?' \u00b7 '+sq.label:''}`,(sq.alert?'red':'amb')]:null,
-    ['Type',meta.icao_type||meta.type||live.t||live.type||'\u2014',''],
-    ['Maker',meta.manufacturer||'\u2014',''],
-    ['Owner',meta.registered_owner||'\u2014',''],
+    ['REG',reg,'amb'],
+    cs?['C/S',cs,'live']:null,
+    sq?['SQK',`${sq.code}${sq.label?' \u00b7 '+sq.label:''}`,(sq.alert?'red':'amb')]:null,
+    ['TYPE',meta.icao_type||meta.type||live.t||live.type||'\u2014',''],
+    ['MFR',meta.manufacturer||'\u2014',''],
+    ['OWNER',meta.registered_owner||'\u2014',''],
     ['ICAO',meta.mode_s||item.hex||'\u2014',''],
-    ['Altitude',fmtAlt(live),(air?'live':'')],
-    ['Speed',fmtSpd(live),''],
-    ['Track',fmtTrack(live),''],
-    ['Climb',fmtClimb(live),''],
-    ['Distance',`${item.distNm?.toFixed(1)||'\u2014'}\u202fNM`,''],
-    ['Position',fmtCoords(pickN(live.lat,live.latitude),pickN(live.lon,live.longitude)),''],
-    ['Last seen',fmtAgo(live.seen??live.seen_pos),''],
+    ['ALT',fmtAlt(live),(air?'live':'')],
+    ['G/S',fmtSpd(live),''],
+    ['TRK',fmtTrack(live),''],
+    ['V/S',fmtClimb(live),''],
+    ['DIST',`${item.distNm?.toFixed(1)||'\u2014'}\u202fNM`,''],
+    ['POSN',fmtCoords(pickN(live.lat,live.latitude),pickN(live.lon,live.longitude)),''],
+    ['UPDT',fmtAgo(live.seen??live.seen_pos),''],
   ].filter(Boolean);
   return`${photo?`<div class="sph"><img src="${photo}" alt=""></div>`:''}
 <div class="dtbl">${rows.map(([k,v,c])=>`<div class="drow"><span class="dk">${k}</span><span class="dv ${c||''}">${v||'\u2014'}</span></div>`).join('')}</div>
 ${route?`<div class="rbox" style="margin-top:11px">
-  <div style="font-size:9px;text-transform:uppercase;letter-spacing:.13em;font-weight:700;color:var(--mu2);margin-bottom:9px">Route</div>
+  <div style="font-size:8px;text-transform:uppercase;letter-spacing:.16em;font-weight:700;color:var(--mu2);margin-bottom:9px;font-family:var(--mono)">FLIGHT ROUTE</div>
   ${routeHtml(route,live)}
 </div>`:''}`;}
 
@@ -796,7 +852,7 @@ function updateNearestCard(){
 }
 function renderSelected(){
   el('selCard').innerHTML=makeSelectedHtml(S.selectedInfo);
-  el('selPill').textContent=S.selectedInfo?(S.selectedInfo.reg||S.selectedInfo.hex||'Aircraft'):'None';
+  el('selPill').textContent=S.selectedInfo?(S.selectedInfo.reg||S.selectedInfo.hex||'AIRCRAFT'):'NONE';
 }
 function renderNearbyList(){
   const box=el('nbList');
@@ -806,13 +862,18 @@ function renderNearbyList(){
     const cs=norm(item.raw?.flight||item.callsign);
     const sq=sqInfo(item.raw?.squawk);
     const type=item.raw?.t||item.raw?.type||'';
+    const kind=classifyAC(item.raw||{});
+    const{label,cls}=acCategory(kind);
     const btn=document.createElement('button');
     btn.className=`nb-btn${item.key===S.selectedKey?' active':''}`;
     btn.innerHTML=`<div class="nb-l">
       <div class="nb-reg">${item.reg||item.hex||'Aircraft'}</div>
-      <div class="nb-meta">${cs||'\u2014'} \u00b7 ${type||'?'} \u00b7 ${fmtAlt(item.raw)}${sq&&sq.alert?` <span class="nb-sq">\u00b7 ${sq.code}</span>`:''}</div>
+      <div class="nb-meta">${cs||'\u2014'} \u00b7 ${type||'?'}${sq&&sq.alert?` <span class="nb-sq">\u00b7 ${sq.code}</span>`:''}</div>
     </div>
-    <div class="nb-dist">${item.distNm.toFixed(1)}\u202fNM</div>`;
+    <div class="nb-r">
+      <div class="nb-dist">${item.distNm.toFixed(1)}\u202fNM</div>
+      <span class="cat ${cls}" style="font-size:8px;padding:1px 5px">${label}</span>
+    </div>`;
     btn.onclick=()=>selectAircraft(item.key);
     box.appendChild(btn);
   });
@@ -850,9 +911,8 @@ async function loadNearby(){
   if(!S.selectedKey||!S.allAC.has(S.selectedKey))S.selectedKey=S.nearby[0]?.key||null;
   S.selectedInfo=S.selectedKey?S.allAC.get(S.selectedKey)||null:null;
   updateNearestCard();renderSelected();renderNearbyList();renderMap();
-  el('trafficCount').textContent=`${S.allAC.size} aircraft`;
-  setStatus(S.nearby.length?`${S.nearby.length} nearby`:'No traffic nearby',S.nearby.length?'live':'warn');
-  /* Auto-fetch info for nearest + selected */
+  el('trafficCount').textContent=`${S.allAC.size} ACFT`;
+  setStatus(S.nearby.length?`${S.nearby.length} NEARBY`:'NO TRAFFIC NEARBY',S.nearby.length?'live':'warn');
   if(S.nearby.length){
     const nearest=S.nearby[0];
     if(!nearest.meta&&!nearest.route){
@@ -885,24 +945,24 @@ async function selectAircraft(key){
 
 async function locateUser(){
   if(!navigator.geolocation){
-    setStatus('Geolocation unavailable','bad');
+    setStatus('GEO UNAVAILABLE','bad');
     el('nearestCard').innerHTML='<div class="empty">Geolocation not supported.</div>';return;
   }
   navigator.geolocation.getCurrentPosition(async pos=>{
     S.user={lat:pos.coords.latitude,lon:pos.coords.longitude};
-    setStatus('Loading\u2026','warn');
+    setStatus('LOADING\u2026','warn');
     ensureMap();drawRings(S.user.lat,S.user.lon);
     S.map.setView([S.user.lat,S.user.lon],10);
     try{
       await loadNearby();
       if(!S.refreshTimer){
         S.refreshTimer=setInterval(async()=>{
-          try{await loadNearby();}catch(_){setStatus('Update failed','bad');}
+          try{await loadNearby();}catch(_){setStatus('UPDATE FAILED','bad');}
         },REFRESH_MS);
       }
-    }catch(e){setStatus('Failed to load traffic','bad');}
+    }catch(e){setStatus('LOAD FAILED','bad');}
   },()=>{
-    setStatus('Location denied','bad');
+    setStatus('DENIED','bad');
     el('nearestCard').innerHTML='<div class="empty">Location access denied. Allow location access and reload.</div>';
   },{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
@@ -911,7 +971,7 @@ async function locateUser(){
 window.__sel=selectAircraft;
 function init(){
   ensureMap();updateNearestCard();renderSelected();renderNearbyList();
-  setStatus('Locating\u2026','warn');locateUser();
+  setStatus('LOCATING\u2026','warn');locateUser();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
