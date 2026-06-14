@@ -1,0 +1,127 @@
+/* ============================================================================
+   OVERHEAD · Airport reference dataset
+   Curated set of notable airports for the AIRPORTS overlay layer.
+   Fields: ic = ICAO, ia = IATA, n = name, c = city, lat, lon, big = major hub
+   Bundled rather than fetched so the overlay works offline / key-free.
+   ========================================================================== */
+window.AIRPORTS = [
+  /* ── New Zealand ── */
+  {ic:'NZAA',ia:'AKL',n:'Auckland',c:'Auckland',lat:-37.0082,lon:174.7850,big:1},
+  {ic:'NZWN',ia:'WLG',n:'Wellington',c:'Wellington',lat:-41.3272,lon:174.8053,big:1},
+  {ic:'NZCH',ia:'CHC',n:'Christchurch',c:'Christchurch',lat:-43.4894,lon:172.5322,big:1},
+  {ic:'NZQN',ia:'ZQN',n:'Queenstown',c:'Queenstown',lat:-45.0211,lon:168.7392,big:0},
+  {ic:'NZDN',ia:'DUD',n:'Dunedin',c:'Dunedin',lat:-45.9281,lon:170.1983,big:0},
+  {ic:'NZHN',ia:'HLZ',n:'Hamilton',c:'Hamilton',lat:-37.8667,lon:175.3322,big:0},
+  {ic:'NZNS',ia:'NSN',n:'Nelson',c:'Nelson',lat:-41.2983,lon:173.2211,big:0},
+  {ic:'NZRO',ia:'ROT',n:'Rotorua',c:'Rotorua',lat:-38.1092,lon:176.3175,big:0},
+  {ic:'NZNR',ia:'NPE',n:'Hawke\u2019s Bay',c:'Napier',lat:-39.4658,lon:176.8700,big:0},
+  {ic:'NZPM',ia:'PMR',n:'Palmerston North',c:'Palmerston Nth',lat:-40.3206,lon:175.6172,big:0},
+  {ic:'NZNP',ia:'NPL',n:'New Plymouth',c:'New Plymouth',lat:-39.0086,lon:174.1794,big:0},
+  {ic:'NZIV',ia:'IVC',n:'Invercargill',c:'Invercargill',lat:-46.4124,lon:168.3128,big:0},
+
+  /* ── Australia ── */
+  {ic:'YSSY',ia:'SYD',n:'Sydney Kingsford Smith',c:'Sydney',lat:-33.9461,lon:151.1772,big:1},
+  {ic:'YMML',ia:'MEL',n:'Melbourne',c:'Melbourne',lat:-37.6733,lon:144.8433,big:1},
+  {ic:'YBBN',ia:'BNE',n:'Brisbane',c:'Brisbane',lat:-27.3842,lon:153.1175,big:1},
+  {ic:'YPPH',ia:'PER',n:'Perth',c:'Perth',lat:-31.9403,lon:115.9669,big:1},
+  {ic:'YPAD',ia:'ADL',n:'Adelaide',c:'Adelaide',lat:-34.9450,lon:138.5306,big:0},
+  {ic:'YBCG',ia:'OOL',n:'Gold Coast',c:'Gold Coast',lat:-28.1644,lon:153.5050,big:0},
+  {ic:'YPDN',ia:'DRW',n:'Darwin',c:'Darwin',lat:-12.4147,lon:130.8767,big:0},
+  {ic:'YBCS',ia:'CNS',n:'Cairns',c:'Cairns',lat:-16.8858,lon:145.7553,big:0},
+  {ic:'YSCB',ia:'CBR',n:'Canberra',c:'Canberra',lat:-35.3069,lon:149.1950,big:0},
+  {ic:'YMHB',ia:'HBA',n:'Hobart',c:'Hobart',lat:-42.8361,lon:147.5103,big:0},
+
+  /* ── Pacific ── */
+  {ic:'NFFN',ia:'NAN',n:'Nadi',c:'Nadi',lat:-17.7554,lon:177.4434,big:0},
+  {ic:'NTAA',ia:'PPT',n:'Faa\u2019a',c:'Papeete',lat:-17.5537,lon:-149.6072,big:0},
+  {ic:'NWWW',ia:'NOU',n:'La Tontouta',c:'Nouméa',lat:-22.0146,lon:166.2129,big:0},
+  {ic:'NSFA',ia:'APW',n:'Faleolo',c:'Apia',lat:-13.8300,lon:-172.0083,big:0},
+  {ic:'PHNL',ia:'HNL',n:'Daniel K. Inouye',c:'Honolulu',lat:21.3187,lon:-157.9224,big:1},
+  {ic:'PGUM',ia:'GUM',n:'Antonio B. Won Pat',c:'Guam',lat:13.4834,lon:144.7960,big:0},
+
+  /* ── East / SE Asia ── */
+  {ic:'WSSS',ia:'SIN',n:'Singapore Changi',c:'Singapore',lat:1.3592,lon:103.9894,big:1},
+  {ic:'VHHH',ia:'HKG',n:'Hong Kong Intl',c:'Hong Kong',lat:22.3080,lon:113.9185,big:1},
+  {ic:'RJTT',ia:'HND',n:'Tokyo Haneda',c:'Tokyo',lat:35.5494,lon:139.7798,big:1},
+  {ic:'RJAA',ia:'NRT',n:'Tokyo Narita',c:'Tokyo',lat:35.7720,lon:140.3929,big:1},
+  {ic:'RKSI',ia:'ICN',n:'Incheon',c:'Seoul',lat:37.4602,lon:126.4407,big:1},
+  {ic:'ZBAA',ia:'PEK',n:'Beijing Capital',c:'Beijing',lat:40.0801,lon:116.5846,big:1},
+  {ic:'ZSPD',ia:'PVG',n:'Shanghai Pudong',c:'Shanghai',lat:31.1443,lon:121.8083,big:1},
+  {ic:'VTBS',ia:'BKK',n:'Suvarnabhumi',c:'Bangkok',lat:13.6900,lon:100.7501,big:1},
+  {ic:'WMKK',ia:'KUL',n:'Kuala Lumpur',c:'Kuala Lumpur',lat:2.7456,lon:101.7099,big:1},
+  {ic:'WIII',ia:'CGK',n:'Soekarno-Hatta',c:'Jakarta',lat:-6.1256,lon:106.6559,big:1},
+  {ic:'RPLL',ia:'MNL',n:'Ninoy Aquino',c:'Manila',lat:14.5086,lon:121.0197,big:1},
+  {ic:'RCTP',ia:'TPE',n:'Taoyuan',c:'Taipei',lat:25.0777,lon:121.2328,big:1},
+  {ic:'VVTS',ia:'SGN',n:'Tan Son Nhat',c:'Ho Chi Minh City',lat:10.8188,lon:106.6520,big:0},
+
+  /* ── South Asia / Middle East ── */
+  {ic:'VIDP',ia:'DEL',n:'Indira Gandhi',c:'Delhi',lat:28.5562,lon:77.1000,big:1},
+  {ic:'VABB',ia:'BOM',n:'Chhatrapati Shivaji',c:'Mumbai',lat:19.0887,lon:72.8679,big:1},
+  {ic:'OMDB',ia:'DXB',n:'Dubai Intl',c:'Dubai',lat:25.2532,lon:55.3657,big:1},
+  {ic:'OTHH',ia:'DOH',n:'Hamad Intl',c:'Doha',lat:25.2731,lon:51.6080,big:1},
+  {ic:'OMAA',ia:'AUH',n:'Abu Dhabi Intl',c:'Abu Dhabi',lat:24.4330,lon:54.6511,big:0},
+  {ic:'OEJN',ia:'JED',n:'King Abdulaziz',c:'Jeddah',lat:21.6796,lon:39.1565,big:0},
+  {ic:'LTFM',ia:'IST',n:'Istanbul',c:'Istanbul',lat:41.2753,lon:28.7519,big:1},
+  {ic:'LLBG',ia:'TLV',n:'Ben Gurion',c:'Tel Aviv',lat:32.0114,lon:34.8867,big:0},
+
+  /* ── Europe ── */
+  {ic:'EGLL',ia:'LHR',n:'London Heathrow',c:'London',lat:51.4700,lon:-0.4543,big:1},
+  {ic:'EGKK',ia:'LGW',n:'London Gatwick',c:'London',lat:51.1481,lon:-0.1903,big:0},
+  {ic:'LFPG',ia:'CDG',n:'Charles de Gaulle',c:'Paris',lat:49.0097,lon:2.5479,big:1},
+  {ic:'EHAM',ia:'AMS',n:'Schiphol',c:'Amsterdam',lat:52.3105,lon:4.7683,big:1},
+  {ic:'EDDF',ia:'FRA',n:'Frankfurt',c:'Frankfurt',lat:50.0379,lon:8.5622,big:1},
+  {ic:'EDDM',ia:'MUC',n:'Munich',c:'Munich',lat:48.3538,lon:11.7861,big:1},
+  {ic:'LEMD',ia:'MAD',n:'Adolfo Suárez',c:'Madrid',lat:40.4719,lon:-3.5626,big:1},
+  {ic:'LEBL',ia:'BCN',n:'Barcelona',c:'Barcelona',lat:41.2974,lon:2.0833,big:1},
+  {ic:'LIRF',ia:'FCO',n:'Fiumicino',c:'Rome',lat:41.8003,lon:12.2389,big:1},
+  {ic:'LIMC',ia:'MXP',n:'Malpensa',c:'Milan',lat:45.6306,lon:8.7281,big:0},
+  {ic:'LSZH',ia:'ZRH',n:'Zürich',c:'Zürich',lat:47.4647,lon:8.5492,big:0},
+  {ic:'LOWW',ia:'VIE',n:'Vienna',c:'Vienna',lat:48.1103,lon:16.5697,big:0},
+  {ic:'EKCH',ia:'CPH',n:'Copenhagen',c:'Copenhagen',lat:55.6181,lon:12.6561,big:0},
+  {ic:'ENGM',ia:'OSL',n:'Oslo Gardermoen',c:'Oslo',lat:60.1939,lon:11.1004,big:0},
+  {ic:'ESSA',ia:'ARN',n:'Stockholm Arlanda',c:'Stockholm',lat:59.6519,lon:17.9186,big:0},
+  {ic:'EIDW',ia:'DUB',n:'Dublin',c:'Dublin',lat:53.4213,lon:-6.2701,big:0},
+  {ic:'LSGG',ia:'GVA',n:'Geneva',c:'Geneva',lat:46.2381,lon:6.1089,big:0},
+  {ic:'EGCC',ia:'MAN',n:'Manchester',c:'Manchester',lat:53.3537,lon:-2.2750,big:0},
+  {ic:'UUEE',ia:'SVO',n:'Sheremetyevo',c:'Moscow',lat:55.9726,lon:37.4146,big:1},
+  {ic:'LGAV',ia:'ATH',n:'Athens',c:'Athens',lat:37.9364,lon:23.9445,big:0},
+  {ic:'LPPT',ia:'LIS',n:'Humberto Delgado',c:'Lisbon',lat:38.7813,lon:-9.1359,big:0},
+
+  /* ── Africa ── */
+  {ic:'FAOR',ia:'JNB',n:'O. R. Tambo',c:'Johannesburg',lat:-26.1392,lon:28.2460,big:1},
+  {ic:'FACT',ia:'CPT',n:'Cape Town',c:'Cape Town',lat:-33.9715,lon:18.6021,big:0},
+  {ic:'HECA',ia:'CAI',n:'Cairo Intl',c:'Cairo',lat:30.1219,lon:31.4056,big:1},
+  {ic:'DNMM',ia:'LOS',n:'Murtala Muhammed',c:'Lagos',lat:6.5774,lon:3.3212,big:0},
+  {ic:'HKJK',ia:'NBO',n:'Jomo Kenyatta',c:'Nairobi',lat:-1.3192,lon:36.9278,big:0},
+  {ic:'GMMN',ia:'CMN',n:'Mohammed V',c:'Casablanca',lat:33.3675,lon:-7.5900,big:0},
+  {ic:'HAAB',ia:'ADD',n:'Bole',c:'Addis Ababa',lat:8.9779,lon:38.7993,big:0},
+
+  /* ── North America ── */
+  {ic:'KATL',ia:'ATL',n:'Hartsfield-Jackson',c:'Atlanta',lat:33.6407,lon:-84.4277,big:1},
+  {ic:'KLAX',ia:'LAX',n:'Los Angeles Intl',c:'Los Angeles',lat:33.9416,lon:-118.4085,big:1},
+  {ic:'KORD',ia:'ORD',n:'O\u2019Hare',c:'Chicago',lat:41.9742,lon:-87.9073,big:1},
+  {ic:'KDFW',ia:'DFW',n:'Dallas/Fort Worth',c:'Dallas',lat:32.8998,lon:-97.0403,big:1},
+  {ic:'KDEN',ia:'DEN',n:'Denver Intl',c:'Denver',lat:39.8561,lon:-104.6737,big:1},
+  {ic:'KJFK',ia:'JFK',n:'John F. Kennedy',c:'New York',lat:40.6413,lon:-73.7781,big:1},
+  {ic:'KEWR',ia:'EWR',n:'Newark Liberty',c:'New York',lat:40.6895,lon:-74.1745,big:0},
+  {ic:'KSFO',ia:'SFO',n:'San Francisco',c:'San Francisco',lat:37.6213,lon:-122.3790,big:1},
+  {ic:'KSEA',ia:'SEA',n:'Seattle-Tacoma',c:'Seattle',lat:47.4502,lon:-122.3088,big:1},
+  {ic:'KMIA',ia:'MIA',n:'Miami Intl',c:'Miami',lat:25.7959,lon:-80.2870,big:1},
+  {ic:'KLAS',ia:'LAS',n:'Harry Reid',c:'Las Vegas',lat:36.0840,lon:-115.1537,big:0},
+  {ic:'KBOS',ia:'BOS',n:'Logan Intl',c:'Boston',lat:42.3656,lon:-71.0096,big:0},
+  {ic:'KIAH',ia:'IAH',n:'George Bush',c:'Houston',lat:29.9902,lon:-95.3368,big:0},
+  {ic:'KPHX',ia:'PHX',n:'Sky Harbor',c:'Phoenix',lat:33.4343,lon:-112.0116,big:0},
+  {ic:'CYYZ',ia:'YYZ',n:'Toronto Pearson',c:'Toronto',lat:43.6777,lon:-79.6248,big:1},
+  {ic:'CYVR',ia:'YVR',n:'Vancouver Intl',c:'Vancouver',lat:49.1947,lon:-123.1792,big:0},
+  {ic:'CYUL',ia:'YUL',n:'Montréal-Trudeau',c:'Montréal',lat:45.4706,lon:-73.7408,big:0},
+  {ic:'MMMX',ia:'MEX',n:'Benito Juárez',c:'Mexico City',lat:19.4363,lon:-99.0721,big:1},
+  {ic:'MMUN',ia:'CUN',n:'Cancún',c:'Cancún',lat:21.0365,lon:-86.8771,big:0},
+
+  /* ── South America ── */
+  {ic:'SBGR',ia:'GRU',n:'Guarulhos',c:'São Paulo',lat:-23.4356,lon:-46.4731,big:1},
+  {ic:'SAEZ',ia:'EZE',n:'Ministro Pistarini',c:'Buenos Aires',lat:-34.8222,lon:-58.5358,big:1},
+  {ic:'SCEL',ia:'SCL',n:'Arturo Merino Benítez',c:'Santiago',lat:-33.3930,lon:-70.7858,big:0},
+  {ic:'SKBO',ia:'BOG',n:'El Dorado',c:'Bogotá',lat:4.7016,lon:-74.1469,big:1},
+  {ic:'SPJC',ia:'LIM',n:'Jorge Chávez',c:'Lima',lat:-12.0219,lon:-77.1143,big:0},
+  {ic:'SBGL',ia:'GIG',n:'Galeão',c:'Rio de Janeiro',lat:-22.8100,lon:-43.2506,big:0},
+];
