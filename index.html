@@ -160,6 +160,20 @@
         <button class="nbtn on" data-ov="airports" type="button">AIRPORTS</button>
         <button class="nbtn" data-ov="labels" type="button">LABELS</button>
         <button class="nbtn" data-ov="weather" type="button">WX RADAR</button>
+        <button class="nbtn" data-ov="aero" type="button">AERO CHART</button>
+      </div>
+      <!-- AERO opacity (shown when active) -->
+      <div class="oprow" id="aeroOpRow" style="display:none">
+        <span class="oplab">AERO</span>
+        <input id="aeroOp" type="range" min="20" max="100" value="90" title="Aero chart opacity">
+      </div>
+      <!-- AERO key prompt (shown when no key set) -->
+      <div class="keywrap" id="aeroKeyWrap" style="display:none">
+        <p class="keynote">Airspace &amp; airway chart needs a free <a href="https://www.openaip.net" target="_blank" rel="noopener">openAIP</a> key (one-time).</p>
+        <div class="keyrow">
+          <input id="aeroKeyInput" type="text" placeholder="paste openAIP API key" autocomplete="off" spellcheck="false">
+          <button id="aeroKeySave" type="button">SAVE</button>
+        </div>
       </div>
       <div class="wx-ctl" id="wxCtl">
         <button id="wxPrev" type="button" title="Previous frame">&#9664;</button>
@@ -179,6 +193,14 @@
       <span class="leg-item"><span class="leg-dot" style="background:#a78bfa"></span>36k+</span>
       <span class="leg-item"><span class="leg-dot" style="background:#f0a830;border-radius:1px"></span>approach</span>
       <span class="leg-item"><span class="leg-dot" style="background:#2eb6f0;border-radius:1px"></span>departure</span>
+    </div>
+
+    <!-- live status strip -->
+    <div class="map-status">
+      <span class="st-k">CTR</span><span id="stCoord">—</span>
+      <span class="st-sep"></span><span id="stZoom">Z—</span>
+      <span class="st-sep"></span><span id="stCount">— ACFT</span>
+      <span class="st-sep"></span><span class="st-k">AGE</span><span id="stAge">—</span>
     </div>
   </div>
 
