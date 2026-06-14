@@ -172,18 +172,18 @@ const ISIZES={wide:40,narrow:31,regional:27,bizjet:24,turboprop:27,'piston-twin'
 
 /* ── ALTITUDE COLOUR BANDS ───────────────────────────────────────────────── */
 const ALT_BANDS=[
-  {max:0,     col:'#6b7280',label:'GROUND'},
-  {max:3000,  col:'#e8a020',label:'<3K'},
-  {max:12000, col:'#fbbf24',label:'3\u201312K'},
-  {max:25000, col:'#1ec878',label:'12\u201325K'},
-  {max:36000, col:'#22b4f0',label:'25\u201336K'},
-  {max:Infinity,col:'#a78bfa',label:'36K+'},
+  {max:0,     col:'#94a3b8',label:'GROUND'},
+  {max:3000,  col:'#cf9a4a',label:'<3K'},
+  {max:12000, col:'#c9ad57',label:'3\u201312K'},
+  {max:25000, col:'#57a386',label:'12\u201325K'},
+  {max:36000, col:'#5594b5',label:'25\u201336K'},
+  {max:Infinity,col:'#8d83b3',label:'36K+'},
 ];
 function altColor(a,gnd){
-  if(gnd||a===0)return'#6b7280';
-  if(a==null)return'#1ec878';
+  if(gnd||a===0)return'#94a3b8';
+  if(a==null)return'#57a386';
   for(const b of ALT_BANDS)if(a<b.max||b.max===Infinity)return b.col;
-  return'#a78bfa';
+  return'#8d83b3';
 }
 function iconColor(raw){
   const a=pickN(raw?.alt_baro,raw?.altitude,raw?.alt);

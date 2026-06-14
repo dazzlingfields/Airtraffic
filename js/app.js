@@ -33,7 +33,7 @@ const S={
   theme:'auto',               // auto|dark|light
   units:'imperial',           // imperial|metric
   follow:false,
-  openaipKey:'',aeroOpacity:0.9,
+  openaipKey:'388e7444c5966dcb282adac4bef1a843',aeroOpacity:0.9,
   overlays:{trails:true,rings:true,airports:true,labels:false,weather:false,aero:false},
   wx:{frames:[],host:'',idx:0,layers:{},playing:false,timer:null,opacity:0.6},
 };
@@ -604,7 +604,7 @@ function renderMap(){
       .addTo(S.approachLayer);
     const p=flightPhase(selItem);
     if((p.cls==='app'||p.cls==='dep')&&p.apt){
-      const col=p.cls==='app'?'#e8a020':'#22b4f0';
+      const col=p.cls==='app'?'#d99a3a':'#6f8190';
       L.polyline([[selItem.lat,selItem.lon],[p.apt.lat,p.apt.lon]],
         {color:col,weight:1.6,opacity:.8,dashArray:'4 6'}).addTo(S.approachLayer);
       L.circleMarker([p.apt.lat,p.apt.lon],{radius:4,color:col,weight:2,fillColor:col,fillOpacity:.5})
@@ -661,7 +661,7 @@ function makeNearestHtml(item){
 </div>`;
 }
 
-/* ── SELECTED CARD ───────────────────────────────────────────────────────── */
+/* ── SELECTED CARD (compact) ─────────────────────────────────────────────── */
 function makeSelectedHtml(item){
   if(!item)return'<div class="empty">Tap any aircraft on the map or in the traffic list to inspect.</div>';
   const meta=item.meta||{},live=item.live||item.raw||{},route=item.route||null;
@@ -672,36 +672,39 @@ function makeSelectedHtml(item){
   const air=isAirborne(live);
   const hex=meta.mode_s||item.hex||'';
   const ph=flightPhase(item);
-  const rows=[
-    ['REG',reg,'amb'],
-    cs?['C/S',cs,'live']:null,
-    sq?['SQK',`${sq.code}${sq.label?' \u00b7 '+sq.label:''}`,(sq.alert?'red':'amb')]:null,
-    ['TYPE',meta.icao_type||meta.type||live.t||live.type||'\u2014',''],
-    ['MFR',meta.manufacturer||'\u2014',''],
-    ['OWNER',meta.registered_owner||'\u2014',''],
-    ['ICAO',hex||'\u2014',''],
-    ['ALT',fmtAlt(live),(air?'live':'')],
+  const type=meta.icao_type||meta.type||live.t||live.type||'\u2014';
+  const metrics=[
+    ['ALT',fmtAlt(live),air?'live':''],
     ['G/S',fmtSpd(live),''],
     ['TRK',fmtTrack(live),''],
     ['V/S',fmtClimb(live),''],
-    ph.apt?['FIELD',`${ph.apt.ia} \u00b7 ${fmtDist(ph.distNm)}`,'']:null,
-    (ph.runway&&(ph.cls==='app'||ph.cls==='dep'))?['RWY (est)',ph.runway,'amb']:null,
     ['DIST',fmtDist(item.distNm),''],
     ['BRG',item.bearing!=null?`${Math.round(item.bearing)}\u00b0 ${compass(item.bearing)}`:'\u2014',''],
-    ['POSN',fmtCoords(pickN(live.lat,live.latitude),pickN(live.lon,live.longitude)),''],
-    ['UPDT',fmtAgo(live.seen??live.seen_pos),''],
+  ];
+  const idents=[
+    ['TYPE',type,''],
+    meta.manufacturer?['MFR',meta.manufacturer,'']:null,
+    meta.registered_owner?['OPERATOR',meta.registered_owner,'']:null,
+    hex?['ICAO',hex,'']:null,
+    sq?['SQUAWK',`${sq.code}${sq.label?' \u00b7 '+sq.label:''}`,(sq.alert?'red':'')]:null,
+    ph.apt?['FIELD',`${ph.apt.ia} \u00b7 ${fmtDist(ph.distNm)}`,'']:null,
+    (ph.runway&&(ph.cls==='app'||ph.cls==='dep'))?['RWY (est)',ph.runway,'']:null,
+    ['POSITION',fmtCoords(pickN(live.lat,live.latitude),pickN(live.lon,live.longitude)),''],
+    ['UPDATED',fmtAgo(live.seen??live.seen_pos),''],
   ].filter(Boolean);
   const links=hex?`<div class="ext-links">
-    <a href="https://globe.adsbexchange.com/?icao=${hex.toLowerCase()}" target="_blank" rel="noopener">ADSBEx \u2197</a>
+    <a href="https://globe.adsbexchange.com/?icao=${hex.toLowerCase()}" target="_blank" rel="noopener">ADSB Exchange \u2197</a>
     <a href="https://flightaware.com/live/flight/${encodeURIComponent(cs||reg)}" target="_blank" rel="noopener">FlightAware \u2197</a>
   </div>`:'';
   return`${photo?`<div class="sph"><img src="${photo}" alt=""></div>`:''}
 <div class="phase-row">${phaseHtml(item)}</div>
-<div class="sel-split">
-  ${altTape(live)}
-  <div class="dtbl">${rows.map(([k,v,c])=>`<div class="drow"><span class="dk">${k}</span><span class="dv ${c||''}">${v||'\u2014'}</span></div>`).join('')}</div>
+<div class="smini">
+  ${metrics.map(([k,v,c])=>`<div class="sm"><div class="k">${k}</div><div class="v ${c||''}">${v||'\u2014'}</div></div>`).join('')}
 </div>
-${route?`<div class="rbox" style="margin-top:11px"><div class="rbox-h">FLIGHT ROUTE</div>${routeHtml(route,live)}</div>`:''}
+<div class="idlist">
+  ${idents.map(([k,v,c])=>`<div class="idrow"><span class="idk">${k}</span><span class="idv ${c||''}">${v||'\u2014'}</span></div>`).join('')}
+</div>
+${route?`<div class="rbox" style="margin-top:10px"><div class="rbox-h">FLIGHT ROUTE</div>${routeHtml(route,live)}</div>`:''}
 ${links}`;
 }
 
@@ -823,7 +826,7 @@ async function loadNearby(){
   renderMap();renderAll();
   el('trafficCount').textContent=`${S.allAC.size} ACFT`;updateMapStatus();
   setStatus(S.nearbyFiltered.length?`${S.nearbyFiltered.length} NEARBY`:'NO TRAFFIC NEARBY',S.nearbyFiltered.length?'live':'warn');
-  if(S.follow&&S.nearbyFiltered[0]&&S.map)S.map.panTo([S.nearbyFiltered[0].lat,S.nearbyFiltered[0].lon],{animate:true});
+  if(S.follow&&S.map){const t=(S.selectedKey&&S.allAC.get(S.selectedKey))||S.nearbyFiltered[0];if(t&&t.lat!=null)S.map.panTo([t.lat,t.lon],{animate:true});}
   const nearest=S.nearbyFiltered[0];
   if(nearest&&!nearest.meta&&!nearest.route){
     fetchAcInfo(nearest).then(({meta,route})=>{
@@ -853,6 +856,7 @@ async function selectAircraft(key){
   S.selectedKey=key;S.selectedInfo=item;
   el('selCard').innerHTML=makeSelectedHtml(item);
   el('selPill').textContent=item.reg||item.hex||'AIRCRAFT';
+  try{el('selCard').closest('.card').scrollIntoView({block:'nearest',behavior:'smooth'});}catch(_){}
   renderNearbyList();renderPlaneLayer();
   if(S.map)renderMap();
   if(S.map&&item.lat!=null)S.map.panTo([item.lat,item.lon],{animate:true});
@@ -883,7 +887,7 @@ function loadSettings(){
     if(d.overlays)Object.assign(S.overlays,d.overlays);
     if(typeof d.wxOpacity==='number')S.wx.opacity=d.wxOpacity;
     if(typeof d.aeroOpacity==='number')S.aeroOpacity=d.aeroOpacity;
-    try{S.openaipKey=localStorage.getItem(KEY_STORE)||'';}catch(_){}
+    try{S.openaipKey=localStorage.getItem(KEY_STORE)||S.openaipKey;}catch(_){}
     if(d.F){F.q=d.F.q||'';F.cats=new Set(d.F.cats||AC.CHIPS);
       F.altMin=d.F.altMin??0;F.altMax=d.F.altMax??45000;
       F.airborneOnly=!!d.F.airborneOnly;F.militaryOnly=!!d.F.militaryOnly;F.emergencyOnly=!!d.F.emergencyOnly;}
@@ -945,7 +949,8 @@ function wireUI(){
   // units / theme / follow
   el('unitBtn').onclick=()=>{S.units=M()?'imperial':'metric';el('unitBtn').textContent='UNITS · '+(M()?'METRIC':'IMPERIAL');saveSettings();renderAll();syncFilterUI();drawRings();};
   el('themeBtn').onclick=()=>{S.theme=S.theme==='auto'?'dark':S.theme==='dark'?'light':'auto';applyTheme();saveSettings();};
-  el('followBtn').onclick=()=>{S.follow=!S.follow;el('followBtn').classList.toggle('on',S.follow);el('followBtn').textContent=S.follow?'FOLLOW · ON':'FOLLOW · OFF';saveSettings();if(S.follow&&S.nearbyFiltered[0])S.map.panTo([S.nearbyFiltered[0].lat,S.nearbyFiltered[0].lon]);};
+  el('followBtn').onclick=()=>{S.follow=!S.follow;el('followBtn').classList.toggle('on',S.follow);el('followBtn').textContent=S.follow?'FOLLOW · ON':'FOLLOW · OFF';saveSettings();if(S.follow){const t=(S.selectedKey&&S.allAC.get(S.selectedKey))||S.nearbyFiltered[0];if(t&&t.lat!=null)S.map.panTo([t.lat,t.lon]);}};
+  if(el('recenterBtn'))el('recenterBtn').onclick=()=>{if(S.user&&S.map)S.map.setView([S.user.lat,S.user.lon],Math.max(S.map.getZoom(),10),{animate:true});};
   el('refreshBtn').onclick=()=>{setStatus('SYNC\u2026','warn');loadNearby().catch(()=>setStatus('SYNC FAILED','bad'));};
   // collapsibles
   document.querySelectorAll('[data-collapse]').forEach(h=>h.onclick=()=>{
