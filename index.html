@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Overhead — live ADS-B aircraft surveillance. Tracks the nearest flight overhead with an in-depth radar map, weather radar, layers, filters and field statistics.">
+<meta name="description" content="Overhead — live ADS-B flight tracking. A map-first radar console: nearest aircraft overhead, weather radar, layers, filters, airport approach &amp; departure detection.">
 <meta name="color-scheme" content="dark light">
-<title>Overhead · Live Flight Surveillance</title>
+<title>Overhead · Live Flight Radar</title>
 
-<!-- No-flash theme: respect saved preference before paint -->
 <script>
 (function(){try{
   var s=JSON.parse(localStorage.getItem('overhead.settings.v2')||'{}');
@@ -25,11 +24,11 @@
 </head>
 <body>
 
-<!-- ── NAV ───────────────────────────────────────────────────────────────── -->
-<nav class="nav">
+<!-- ── TOP BAR ───────────────────────────────────────────────────────────── -->
+<nav class="topbar">
   <div class="nav-logo">
     <div class="logo-mark">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--A)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--A)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 4-4 4-3-1-2 2 5 5 2-2-1-3 4-4 4 6 1.2-.7c.4-.2.7-.6.6-1.1z"/>
       </svg>
     </div>
@@ -37,7 +36,7 @@
   </div>
   <div class="nav-div"></div>
   <span class="nav-sub">ADS-B · LIVE TRAFFIC</span>
-  <span class="nav-mode">SURVEILLANCE</span>
+  <span class="nav-mode">RADAR</span>
 
   <div class="nav-r">
     <button class="nbtn" id="unitBtn" type="button">UNITS · IMPERIAL</button>
@@ -52,157 +51,138 @@
   </div>
 </nav>
 
-<!-- ── EMERGENCY BANNER ──────────────────────────────────────────────────── -->
+<!-- ── EMERGENCY STRIP ───────────────────────────────────────────────────── -->
 <div class="emg" id="emgBanner" style="display:none"></div>
 
-<main class="wrap">
+<!-- ── BODY: SIDEBAR + MAP ───────────────────────────────────────────────── -->
+<div class="body">
 
-  <!-- ── PRIMARY TARGET / NEAREST ────────────────────────────────────────── -->
-  <div class="card nearest" id="nearestCard">
-    <div class="empty">Waiting for location permission&hellip;</div>
-  </div>
+  <!-- SIDEBAR -->
+  <aside class="side">
 
-  <div class="main-grid">
+    <!-- PRIMARY TARGET (nearest) -->
+    <div class="card nearest" id="nearestCard">
+      <div class="empty">Waiting for location permission&hellip;</div>
+    </div>
 
-    <!-- ── MAP ───────────────────────────────────────────────────────────── -->
-    <div class="card map-card cp">
-      <div class="map-head">
-        <div class="map-title"><span>RADAR</span> · LIVE DISPLAY</div>
-        <div class="live-badge">
-          <span class="sd" style="animation:blink 2.8s ease-in-out infinite;flex-shrink:0"></span>
-          <span id="trafficCount">SCANNING</span>
-        </div>
+    <!-- SELECTED AIRCRAFT -->
+    <div class="card cp">
+      <div class="phead">
+        <span class="ph-t">SELECTED</span>
+        <span id="selPill">NONE</span>
       </div>
-      <div id="map"></div>
-      <div class="map-leg">
-        <span class="mleg"><span class="mleg-dot" style="background:#6b7280"></span>GND</span>
-        <span class="mleg"><span class="mleg-dot" style="background:#e8a020"></span>&lt;3k</span>
-        <span class="mleg"><span class="mleg-dot" style="background:#fbbf24"></span>3–12k</span>
-        <span class="mleg"><span class="mleg-dot" style="background:#1ec878"></span>12–25k</span>
-        <span class="mleg"><span class="mleg-dot" style="background:#22b4f0"></span>25–36k</span>
-        <span class="mleg"><span class="mleg-dot" style="background:#a78bfa"></span>36k+</span>
-        <span class="mleg" style="margin-left:auto"><span class="mleg-line"></span>HEADING / TRACK</span>
+      <div id="selCard">
+        <div class="empty">Tap any aircraft on the map or in the list to inspect.</div>
       </div>
     </div>
 
-    <!-- ── SIDEBAR ───────────────────────────────────────────────────────── -->
-    <div class="sidebar">
+    <!-- TRAFFIC IN RANGE -->
+    <div class="card cp">
+      <div class="phead"><span class="ph-t">TRAFFIC IN RANGE</span></div>
+      <div id="nbList"><div class="empty">No returns yet.</div></div>
+    </div>
 
-      <!-- SELECTED AIRCRAFT -->
-      <div class="card cp">
-        <div class="phead">
-          <span class="ph-t">SELECTED AIRCRAFT</span>
-          <span class="sp" id="selPill">NONE</span>
+    <!-- FIELD STATS -->
+    <div class="card cp">
+      <div class="phead clk" data-collapse><span class="ph-t">FIELD STATS</span></div>
+      <div class="card-body">
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="n" id="statTracked">0</div><div class="l">Tracked</div></div>
+          <div class="stat-tile"><div class="n" id="statShown">0</div><div class="l">Shown</div></div>
+          <div class="stat-tile"><div class="n" id="statNearby">0</div><div class="l">In Range</div></div>
+          <div class="stat-tile"><div class="n" id="statAir">0</div><div class="l">Airborne</div></div>
+          <div class="stat-tile"><div class="n" id="statEmerg">0</div><div class="l">Emerg</div></div>
         </div>
-        <div id="selCard">
-          <div class="empty">Tap any aircraft on the map or in the traffic list to inspect.</div>
+        <div class="bars" id="catBars" style="margin-bottom:11px"></div>
+        <div class="bars" id="altBars" style="margin-bottom:11px"></div>
+        <div class="sup">
+          <div class="sup-row"><span class="sk">Closest</span><span class="sv" id="supClosest">—</span></div>
+          <div class="sup-row"><span class="sk">Highest</span><span class="sv" id="supHighest">—</span></div>
+          <div class="sup-row"><span class="sk">Fastest</span><span class="sv" id="supFastest">—</span></div>
         </div>
       </div>
+    </div>
 
-      <!-- NEARBY TRAFFIC -->
-      <div class="card cp">
-        <div class="phead">
-          <span class="ph-t">NEARBY TRAFFIC</span>
+    <!-- FILTERS -->
+    <div class="card cp">
+      <div class="phead clk" data-collapse><span class="ph-t">FILTERS</span></div>
+      <div class="card-body">
+        <input class="f-search" id="fSearch" type="text" placeholder="Search reg / hex / callsign…" autocomplete="off" spellcheck="false">
+        <div class="chips">
+          <button class="chip on" data-chip="HEAVY" type="button">HEAVY</button>
+          <button class="chip on" data-chip="AIRLINE" type="button">AIRLINE</button>
+          <button class="chip on" data-chip="BIZJET" type="button">BIZJET</button>
+          <button class="chip on" data-chip="GA" type="button">GA</button>
+          <button class="chip on" data-chip="ROTOR" type="button">ROTOR</button>
+          <button class="chip on" data-chip="MILITARY" type="button">MIL</button>
+          <button class="chip on" data-chip="GROUND" type="button">GROUND</button>
+          <button class="chip on" data-chip="OTHER" type="button">OTHER</button>
         </div>
-        <div id="nbList">
-          <div class="empty">No returns yet.</div>
+        <div class="f-altrow">
+          <div class="lab"><span>ALT FLOOR</span><b id="fAltMinV">0k</b></div>
+          <input id="fAltMin" type="range" min="0" max="45000" step="1000" value="0">
         </div>
+        <div class="f-altrow">
+          <div class="lab"><span>ALT CEILING</span><b id="fAltMaxV">45k+</b></div>
+          <input id="fAltMax" type="range" min="0" max="45000" step="1000" value="45000">
+        </div>
+        <div class="f-tg">
+          <button class="nbtn" id="fAir" type="button">AIRBORNE</button>
+          <button class="nbtn" id="fMil" type="button">MILITARY</button>
+          <button class="nbtn" id="fEmg" type="button">EMERGENCY</button>
+        </div>
+        <button class="f-reset" id="fReset" type="button">RESET FILTERS</button>
       </div>
+    </div>
 
-      <!-- FIELD STATS -->
-      <div class="card cp">
-        <div class="phead clk" data-collapse>
-          <span class="ph-t">FIELD STATS</span>
-        </div>
-        <div class="card-body">
-          <div class="stat-grid">
-            <div class="stat-tile"><div class="n" id="statTracked">0</div><div class="l">Tracked</div></div>
-            <div class="stat-tile"><div class="n" id="statShown">0</div><div class="l">Shown</div></div>
-            <div class="stat-tile"><div class="n" id="statNearby">0</div><div class="l">In Range</div></div>
-            <div class="stat-tile"><div class="n" id="statAir">0</div><div class="l">Airborne</div></div>
-            <div class="stat-tile"><div class="n" id="statEmerg">0</div><div class="l">Emergency</div></div>
-          </div>
-          <div class="bars" id="catBars" style="margin-top:12px"></div>
-          <div class="bars" id="altBars" style="margin-top:12px"></div>
-          <div class="sup" style="margin-top:12px">
-            <div class="sup-row"><span class="sk">CLOSEST</span><span class="sv" id="supClosest">—</span></div>
-            <div class="sup-row"><span class="sk">HIGHEST</span><span class="sv" id="supHighest">—</span></div>
-            <div class="sup-row"><span class="sk">FASTEST</span><span class="sv" id="supFastest">—</span></div>
-          </div>
-        </div>
+  </aside>
+
+  <!-- MAP -->
+  <div class="mapwrap">
+    <div id="map"></div>
+
+    <div class="map-badge">
+      <span class="sd"></span><span id="trafficCount">SCANNING</span>
+    </div>
+
+    <div class="map-ctl">
+      <div class="ctl-h">BASE MAP</div>
+      <div class="seg">
+        <button class="nbtn on" data-base="dark" type="button">DARK</button>
+        <button class="nbtn" data-base="light" type="button">LIGHT</button>
+        <button class="nbtn" data-base="sat" type="button">SAT</button>
+        <button class="nbtn" data-base="terrain" type="button">TERR</button>
       </div>
-
-      <!-- MAP LAYERS -->
-      <div class="card cp">
-        <div class="phead clk" data-collapse>
-          <span class="ph-t">MAP LAYERS</span>
-        </div>
-        <div class="card-body">
-          <div class="seg">
-            <button class="nbtn on" data-base="dark" type="button">DARK</button>
-            <button class="nbtn" data-base="light" type="button">LIGHT</button>
-            <button class="nbtn" data-base="sat" type="button">SAT</button>
-            <button class="nbtn" data-base="terrain" type="button">TERRAIN</button>
-          </div>
-          <div class="ov-row">
-            <button class="nbtn on" data-ov="trails" type="button">TRAILS</button>
-            <button class="nbtn on" data-ov="rings" type="button">RINGS</button>
-            <button class="nbtn" data-ov="airports" type="button">AIRPORTS</button>
-            <button class="nbtn" data-ov="labels" type="button">LABELS</button>
-            <button class="nbtn" data-ov="weather" type="button">WX RADAR</button>
-          </div>
-          <div class="wx-ctl" id="wxCtl">
-            <button id="wxPrev" type="button" title="Previous frame">&#9664;</button>
-            <button id="wxPlay" type="button" title="Play / pause">&#9654;</button>
-            <button id="wxNext" type="button" title="Next frame">&#9654;|</button>
-            <span id="wxTime" style="font-family:var(--mono);font-size:10px;color:var(--mu2)">—</span>
-            <input id="wxOp" type="range" min="0" max="100" value="70" title="Radar opacity">
-          </div>
-        </div>
+      <div class="ctl-h">OVERLAYS</div>
+      <div class="ov-row">
+        <button class="nbtn on" data-ov="trails" type="button">TRAILS</button>
+        <button class="nbtn on" data-ov="rings" type="button">RINGS</button>
+        <button class="nbtn on" data-ov="airports" type="button">AIRPORTS</button>
+        <button class="nbtn" data-ov="labels" type="button">LABELS</button>
+        <button class="nbtn" data-ov="weather" type="button">WX RADAR</button>
       </div>
-
-      <!-- FILTERS -->
-      <div class="card cp">
-        <div class="phead clk" data-collapse>
-          <span class="ph-t">FILTERS</span>
-        </div>
-        <div class="card-body">
-          <input class="f-search" id="fSearch" type="text" placeholder="Search reg / hex / callsign…" autocomplete="off" spellcheck="false">
-          <div class="chips">
-            <button class="chip on" data-chip="HEAVY" type="button">HEAVY</button>
-            <button class="chip on" data-chip="AIRLINE" type="button">AIRLINE</button>
-            <button class="chip on" data-chip="BIZJET" type="button">BIZJET</button>
-            <button class="chip on" data-chip="GA" type="button">GA</button>
-            <button class="chip on" data-chip="ROTOR" type="button">ROTOR</button>
-            <button class="chip on" data-chip="MILITARY" type="button">MILITARY</button>
-            <button class="chip on" data-chip="OTHER" type="button">OTHER</button>
-          </div>
-          <div class="f-altrow">
-            <div class="lab"><span>ALT FLOOR</span><b id="fAltMinV">0k</b></div>
-            <input id="fAltMin" type="range" min="0" max="45000" step="1000" value="0">
-          </div>
-          <div class="f-altrow">
-            <div class="lab"><span>ALT CEILING</span><b id="fAltMaxV">45k+</b></div>
-            <input id="fAltMax" type="range" min="0" max="45000" step="1000" value="45000">
-          </div>
-          <div class="f-tg">
-            <button class="nbtn" id="fAir" type="button">AIRBORNE ONLY</button>
-            <button class="nbtn" id="fMil" type="button">MILITARY ONLY</button>
-            <button class="nbtn" id="fEmg" type="button">EMERGENCY ONLY</button>
-          </div>
-          <button class="f-reset" id="fReset" type="button">RESET FILTERS</button>
-        </div>
+      <div class="wx-ctl" id="wxCtl">
+        <button id="wxPrev" type="button" title="Previous frame">&#9664;</button>
+        <button id="wxPlay" type="button" title="Play / pause">&#9654;</button>
+        <button id="wxNext" type="button" title="Next frame">&#9654;|</button>
+        <span id="wxTime">—</span>
+        <input id="wxOp" type="range" min="0" max="100" value="60" title="Radar opacity">
       </div>
+    </div>
 
-    </div><!-- /sidebar -->
-  </div><!-- /main-grid -->
+    <div class="map-legend">
+      <span class="leg-item"><span class="leg-dot" style="background:#6b7280"></span>GND</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#f0a830"></span>&lt;3k</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#fbbf24"></span>3–12k</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#27c07a"></span>12–25k</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#2eb6f0"></span>25–36k</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#a78bfa"></span>36k+</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#f0a830;border-radius:1px"></span>approach</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#2eb6f0;border-radius:1px"></span>departure</span>
+    </div>
+  </div>
 
-  <footer class="foot">
-    <span>Overhead · client-side ADS-B surveillance</span>
-    <span>Data: airplanes.live · adsbdb · RainViewer · OpenStreetMap / CARTO / Esri / OpenTopoMap</span>
-    <span>Positions are community-sourced and may be incomplete. Not for navigation.</span>
-  </footer>
-</main>
+</div>
 
 <!-- ── SCRIPTS (ordered, non-module) ─────────────────────────────────────── -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
