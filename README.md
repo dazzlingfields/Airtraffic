@@ -3,28 +3,7 @@
 A fully client-side ADS-B flight tracker. It locates you, surfaces the **nearest aircraft overhead** as a primary target, and pairs it with an in-depth radar map: switchable basemaps, live weather radar, distance rings, trails, airport overlays, filters, and field statistics. No backend, no API keys, no build step — just static files that run on GitHub Pages.
 
 ```
-overhead/
-├── index.html        ← structure + script/style wiring
-├── css/
-│   └── styles.css     ← all styling, dark/light themes
-└── js/
-    ├── airports.js    ← bundled airport dataset  (window.AIRPORTS)
-    ├── aircraft.js    ← classification, icons, alt bands (window.AC)
-    └── app.js         ← map, data fetching, UI, state (main app)
-```
 
-Scripts load in order (`leaflet → airports → aircraft → app`) as plain `<script>` tags — intentionally **not** ES modules, so it works from any path and over `file://` without CORS surprises.
-
-## Deploy to GitHub Pages
-
-1. Put these files in a repository, preserving the structure above (`index.html` at the repo root, or inside `/docs`).
-2. In the repo: **Settings → Pages**.
-3. Under *Build and deployment*, set **Source = Deploy from a branch**, pick your branch and the folder (`/root` or `/docs`), and save.
-4. Open the published `https://<user>.github.io/<repo>/` URL.
-
-**Geolocation requires HTTPS.** GitHub Pages serves over HTTPS by default, so this works once deployed. Opening `index.html` directly from disk will block location in most browsers — use the Pages URL (or a local `https`/`localhost` server) and allow the location prompt. If you deny location, the map still loads; use **SYNC** to retry after granting permission.
-
-## Using it
 
 - **PRIMARY TARGET** — the closest airborne return to you, with photo, route, altitude tape, and live telemetry.
 - **RADAR map** — pan to load traffic for the view; planes are colored by altitude band and rotated to their track.
