@@ -10,6 +10,8 @@ const AC=window.AC, AIRPORTS=window.AIRPORTS||[];
 const API='https://api.airplanes.live';
 const DB='https://api.adsbdb.com/v0';
 const WX_API='https://api.rainviewer.com/public/weather-maps.json';
+const OPENAIP_TILES='https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png'; // worldwide aero chart (airspace/airways/navaids); needs free apiKey
+const KEY_STORE='overhead.openaip.key';
 const USER_RANGE=150;        // NM, initial nearby query radius
 const REFRESH_MS=8000;       // live poll interval
 const PAN_DEBOUNCE=900;
@@ -21,7 +23,7 @@ const STORE='overhead.settings.v2';
 const S={
   map:null,user:null,
   basePane:null,baseLayer:null,
-  ringLayer:null,trailLayer:null,airportLayer:null,planeLayer:null,userLayer:null,approachLayer:null,
+  ringLayer:null,trailLayer:null,airportLayer:null,planeLayer:null,userLayer:null,approachLayer:null,aeroLayer:null,
   nearby:[],nearbyFiltered:[],
   allAC:new Map(),histories:new Map(),
   selectedKey:null,selectedInfo:null,
@@ -31,7 +33,8 @@ const S={
   theme:'auto',               // auto|dark|light
   units:'imperial',           // imperial|metric
   follow:false,
-  overlays:{trails:true,rings:true,airports:true,labels:false,weather:false},
+  openaipKey:'',aeroOpacity:0.9,
+  overlays:{trails:true,rings:true,airports:true,labels:false,weather:false,aero:false},
   wx:{frames:[],host:'',idx:0,layers:{},playing:false,timer:null,opacity:0.6},
 };
 
@@ -217,8 +220,10 @@ function setStatus(txt,tone='live'){
 }
 function tickCountdown(){
   if(!S.lastUpdate)return;
+  const since=Math.round((Date.now()-S.lastUpdate)/1000);
   const s=Math.max(0,Math.round((REFRESH_MS-(Date.now()-S.lastUpdate))/1000));
   el('updPill').textContent=`SYNC ${s}s`;
+  setTxt('stAge',since+'s');
 }
 
 /* ── BASE MAP TILES ──────────────────────────────────────────────────────── */
@@ -238,12 +243,59 @@ function setBase(name){
   saveSettings();
 }
 
+/* ── AERO CHART (OpenAIP · key-optional) ─────────────────────────────────── */
+function ensureAeroLayer(){
+  if(S.aeroLayer||!S.openaipKey||!S.map)return S.aeroLayer;
+  S.aeroLayer=L.tileLayer(OPENAIP_TILES+'?apiKey='+encodeURIComponent(S.openaipKey),
+    {minZoom:4,maxNativeZoom:14,maxZoom:19,opacity:S.aeroOpacity,pane:'aeroPane',crossOrigin:true,
+     attribution:'\u00a9 openAIP'});
+  return S.aeroLayer;
+}
+function toggleAero(on){
+  if(on){
+    if(!S.openaipKey){                       // no key yet — reveal the prompt, stay off
+      S.overlays.aero=false;
+      if(el('aeroKeyWrap'))el('aeroKeyWrap').style.display='block';
+      if(el('aeroOpRow'))el('aeroOpRow').style.display='none';
+      syncOverlayButtons();return;
+    }
+    S.overlays.aero=true;
+    if(el('aeroKeyWrap'))el('aeroKeyWrap').style.display='none';
+    if(el('aeroOpRow'))el('aeroOpRow').style.display='flex';
+    const lyr=ensureAeroLayer();
+    if(lyr&&!S.map.hasLayer(lyr))lyr.addTo(S.map);
+  }else{
+    S.overlays.aero=false;
+    if(el('aeroOpRow'))el('aeroOpRow').style.display='none';
+    if(S.aeroLayer&&S.map.hasLayer(S.aeroLayer))S.map.removeLayer(S.aeroLayer);
+  }
+  saveSettings();
+}
+function applyAeroKey(k){
+  k=String(k||'').trim();if(!k)return;
+  S.openaipKey=k;
+  try{localStorage.setItem(KEY_STORE,k);}catch(_){}
+  if(S.aeroLayer){if(S.map.hasLayer(S.aeroLayer))S.map.removeLayer(S.aeroLayer);S.aeroLayer=null;}
+  toggleAero(true);syncOverlayButtons();
+}
+
+/* ── MAP STATUS BAR ──────────────────────────────────────────────────────── */
+function setTxt(id,v){const e=el(id);if(e)e.textContent=v;}
+function updateMapStatus(){
+  if(!S.map)return;
+  const c=S.map.getCenter();
+  setTxt('stCoord',`${c.lat.toFixed(2)}, ${c.lng.toFixed(2)}`);
+  setTxt('stZoom','Z'+S.map.getZoom());
+  setTxt('stCount',S.allAC.size+' ACFT');
+}
+
 /* ── MAP SETUP ───────────────────────────────────────────────────────────── */
 function ensureMap(){
   if(S.map)return;
   S.map=L.map('map',{zoomControl:false,attributionControl:false}).setView([-37.0,174.8],7);
   L.control.zoom({position:'bottomright'}).addTo(S.map);
   S.basePane=S.map.createPane('basePane');S.basePane.style.zIndex=100;
+  S.map.createPane('aeroPane');S.map.getPane('aeroPane').style.zIndex=150;
   S.ringLayer=L.layerGroup().addTo(S.map);
   S.approachLayer=L.layerGroup().addTo(S.map);
   S.trailLayer=L.layerGroup().addTo(S.map);
@@ -253,8 +305,10 @@ function ensureMap(){
   setBase(S.base);
   S.map.on('moveend',()=>{
     clearTimeout(S.panTimer);
+    updateMapStatus();
     S.panTimer=setTimeout(()=>{fetchForView();if(S.overlays.airports)renderAirports();},PAN_DEBOUNCE);
   });
+  S.map.on('move',updateMapStatus);
   L.control.attribution({prefix:false,position:'bottomright'})
     .addAttribution('© OpenStreetMap, CARTO, Esri · airplanes.live · adsbdb · RainViewer').addTo(S.map);
 }
@@ -524,7 +578,7 @@ function renderMap(){
   ensureMap();
   S.userLayer.clearLayers();S.trailLayer.clearLayers();
   if(S.user){
-    L.marker([S.user.lat,S.user.lon],{icon:L.divIcon({html:'<div class="user-dot"></div>',className:'',iconSize:[11,11],iconAnchor:[5.5,5.5]})})
+    L.marker([S.user.lat,S.user.lon],{icon:L.divIcon({html:'<div class="user-mark"><span class="user-ping"></span><span class="user-core"></span></div>',className:'',iconSize:[44,44],iconAnchor:[22,22]})})
       .addTo(S.userLayer).bindPopup(`<div class="pp-reg">\u{1F4CD} YOUR POSITION</div><div class="pp-row">${fmtCoords(S.user.lat,S.user.lon)}</div>`);
   }
   if(S.overlays.trails){
@@ -545,6 +599,9 @@ function renderMap(){
   S.approachLayer.clearLayers();
   const selItem=S.selectedKey?S.allAC.get(S.selectedKey):null;
   if(selItem&&selItem.lat!=null){
+    L.marker([selItem.lat,selItem.lon],{interactive:false,pane:'overlayPane',
+      icon:L.divIcon({className:'',html:'<div class="sel-ping"></div>',iconSize:[46,46],iconAnchor:[23,23]})})
+      .addTo(S.approachLayer);
     const p=flightPhase(selItem);
     if((p.cls==='app'||p.cls==='dep')&&p.apt){
       const col=p.cls==='app'?'#e8a020':'#22b4f0';
@@ -764,7 +821,7 @@ async function loadNearby(){
   if(!S.selectedKey||!S.allAC.has(S.selectedKey))S.selectedKey=S.nearbyFiltered[0]?.key||null;
   S.selectedInfo=S.selectedKey?S.allAC.get(S.selectedKey)||null:null;
   renderMap();renderAll();
-  el('trafficCount').textContent=`${S.allAC.size} ACFT`;
+  el('trafficCount').textContent=`${S.allAC.size} ACFT`;updateMapStatus();
   setStatus(S.nearbyFiltered.length?`${S.nearbyFiltered.length} NEARBY`:'NO TRAFFIC NEARBY',S.nearbyFiltered.length?'live':'warn');
   if(S.follow&&S.nearbyFiltered[0]&&S.map)S.map.panTo([S.nearbyFiltered[0].lat,S.nearbyFiltered[0].lon],{animate:true});
   const nearest=S.nearbyFiltered[0];
@@ -786,7 +843,7 @@ async function fetchForView(){
     const pl=await fetchJSON(`${API}/v2/point/${c.lat}/${c.lng}/${radiusNm}`);
     mergeAircraft(pl?.ac||pl?.aircraft||[],false);
     renderPlaneLayer();renderStats();renderEmergency();
-    el('trafficCount').textContent=`${S.allAC.size} ACFT`;
+    el('trafficCount').textContent=`${S.allAC.size} ACFT`;updateMapStatus();
   }catch(_){}
 }
 
@@ -814,7 +871,7 @@ window.__sel=selectAircraft;
 function saveSettings(){
   try{localStorage.setItem(STORE,JSON.stringify({
     base:S.base,theme:S.theme,units:S.units,follow:S.follow,overlays:S.overlays,
-    wxOpacity:S.wx.opacity,
+    wxOpacity:S.wx.opacity,aeroOpacity:S.aeroOpacity,
     F:{q:F.q,cats:[...F.cats],altMin:F.altMin,altMax:F.altMax,airborneOnly:F.airborneOnly,militaryOnly:F.militaryOnly,emergencyOnly:F.emergencyOnly},
   }));}catch(_){}
 }
@@ -825,6 +882,8 @@ function loadSettings(){
     if(typeof d.follow==='boolean')S.follow=d.follow;
     if(d.overlays)Object.assign(S.overlays,d.overlays);
     if(typeof d.wxOpacity==='number')S.wx.opacity=d.wxOpacity;
+    if(typeof d.aeroOpacity==='number')S.aeroOpacity=d.aeroOpacity;
+    try{S.openaipKey=localStorage.getItem(KEY_STORE)||'';}catch(_){}
     if(d.F){F.q=d.F.q||'';F.cats=new Set(d.F.cats||AC.CHIPS);
       F.altMin=d.F.altMin??0;F.altMax=d.F.altMax??45000;
       F.airborneOnly=!!d.F.airborneOnly;F.militaryOnly=!!d.F.militaryOnly;F.emergencyOnly=!!d.F.emergencyOnly;}
@@ -859,8 +918,13 @@ function wireUI(){
   document.querySelectorAll('[data-ov]').forEach(b=>b.onclick=async()=>{
     const k=b.dataset.ov;
     if(k==='weather'){await toggleWeather(!S.overlays.weather);syncOverlayButtons();return;}
+    if(k==='aero'){toggleAero(!S.overlays.aero);syncOverlayButtons();return;}
     S.overlays[k]=!S.overlays[k];syncOverlayButtons();saveSettings();renderMap();
   });
+  // aero chart key + opacity
+  if(el('aeroKeySave'))el('aeroKeySave').onclick=()=>applyAeroKey(el('aeroKeyInput').value);
+  if(el('aeroKeyInput'))el('aeroKeyInput').onkeydown=e=>{if(e.key==='Enter')applyAeroKey(e.target.value);};
+  if(el('aeroOp'))el('aeroOp').oninput=e=>{S.aeroOpacity=+e.target.value/100;if(S.aeroLayer)S.aeroLayer.setOpacity(S.aeroOpacity);saveSettings();};
   // weather controls
   el('wxPlay').onclick=wxPlay;
   el('wxPrev').onclick=()=>{wxStop();showWxFrame(S.wx.idx-1);};
@@ -918,7 +982,11 @@ function init(){
   el('followBtn').textContent=S.follow?'FOLLOW · ON':'FOLLOW · OFF';
   el('followBtn').classList.toggle('on',S.follow);
   ensureMap();wireUI();syncOverlayButtons();syncFilterUI();
+  if(el('aeroOp'))el('aeroOp').value=Math.round(S.aeroOpacity*100);
+  if(el('aeroKeyInput')&&S.openaipKey)el('aeroKeyInput').value=S.openaipKey;
   if(S.overlays.weather)toggleWeather(true);
+  if(S.overlays.aero){if(S.openaipKey)toggleAero(true);else{S.overlays.aero=false;syncOverlayButtons();}}
+  updateMapStatus();
   renderAll();
   setStatus('LOCATING\u2026','warn');locateUser();
 }
