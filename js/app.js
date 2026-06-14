@@ -21,7 +21,7 @@ const STORE='overhead.settings.v2';
 const S={
   map:null,user:null,
   basePane:null,baseLayer:null,
-  ringLayer:null,trailLayer:null,airportLayer:null,planeLayer:null,userLayer:null,
+  ringLayer:null,trailLayer:null,airportLayer:null,planeLayer:null,userLayer:null,approachLayer:null,
   nearby:[],nearbyFiltered:[],
   allAC:new Map(),histories:new Map(),
   selectedKey:null,selectedInfo:null,
@@ -31,7 +31,7 @@ const S={
   theme:'auto',               // auto|dark|light
   units:'imperial',           // imperial|metric
   follow:false,
-  overlays:{trails:true,rings:true,airports:false,labels:false,weather:false},
+  overlays:{trails:true,rings:true,airports:true,labels:false,weather:false},
   wx:{frames:[],host:'',idx:0,layers:{},playing:false,timer:null,opacity:0.6},
 };
 
@@ -113,6 +113,83 @@ function sqInfo(raw){
 }
 const isEmergency=raw=>{const s=String(raw?.squawk||'');return s==='7500'||s==='7600'||s==='7700';};
 
+/* ── AIRPORT-RELATIVE FLIGHT PHASE / APPROACH ────────────────────────────── */
+function nearestAirport(lat,lon){
+  let best=null,bestKm=Infinity;
+  for(const a of AIRPORTS){
+    const km=hav(lat,lon,a.lat,a.lon);
+    if(km<bestKm){bestKm=km;best=a;}
+  }
+  return best?{apt:best,distNm:bestKm/1.852}:null;
+}
+const angDiff=(a,b)=>{let d=Math.abs((((a-b)%360)+360)%360);return d>180?360-d:d;};
+function rwyFromTrack(t){               // landing/dep runway aligns with ground track
+  if(t==null)return null;
+  let n=Math.round((((t%360)+360)%360)/10);
+  if(n===0)n=36;
+  return String(n).padStart(2,'0');
+}
+/* Returns {phase,label,cls,apt,distNm,runway,fromDir,vs,toward}.
+   cls ∈ app|dep|gnd|des|crz|enr — drives badge colour. */
+function flightPhase(item){
+  const raw=item.raw||{};
+  const lat=pickN(raw.lat,raw.latitude,item.lat),lon=pickN(raw.lon,raw.longitude,item.lon);
+  const alt=altNumeric(raw);
+  const vs=pickN(raw.baro_rate,raw.geom_rate,raw.vertical_rate);
+  const trk=pickN(raw.track,raw.mag_heading,raw.true_heading);
+  const gnd=raw.on_ground===true||raw.gnd===true||String(raw.alt_baro||'').toLowerCase()==='ground'||alt===0;
+  const na=(lat!=null&&lon!=null)?nearestAirport(lat,lon):null;
+  const out={phase:'\u2014',label:'',cls:'enr',apt:na?.apt||null,distNm:na?.distNm??null,runway:null,fromDir:null,vs,toward:false};
+  if(AC.isVehicle(raw)){out.phase='SURFACE';out.cls='gnd';out.label=na&&na.distNm<4?`At ${na.apt.ia}`:'';return out;}
+  if(!na){out.phase=(alt!=null&&alt>20000)?'CRUISE':'EN ROUTE';out.cls=alt!=null&&alt>20000?'crz':'enr';return out;}
+  const d=na.distNm;
+  const brgAptToAc=bearing(na.apt.lat,na.apt.lon,lat,lon);  // where the aircraft sits, from field
+  const brgAcToApt=bearing(lat,lon,na.apt.lat,na.apt.lon);  // heading that points at the field
+  const toward=trk!=null&&angDiff(trk,brgAcToApt)<55;
+  const away  =trk!=null&&angDiff(trk,brgAcToApt)>125;
+  out.fromDir=compass(brgAptToAc);out.toward=toward;
+  if(gnd){out.phase='ON GROUND';out.cls='gnd';out.label=d<4?na.apt.ia:'';return out;}
+  if(vs!=null&&vs>400&&alt<13000&&d<35&&away){
+    out.phase='DEPARTURE';out.cls='dep';out.label=`climb-out · ${na.apt.ia}`;out.runway=rwyFromTrack(trk);return out;
+  }
+  if(vs!=null&&vs<-250&&d<40&&alt!=null&&alt<13000&&toward){
+    if(alt<2500&&d<8)out.phase='FINAL APPROACH';
+    else if(alt<6000&&d<18)out.phase='APPROACH';
+    else out.phase='ARRIVAL';
+    out.cls='app';out.label=na.apt.ia;out.runway=rwyFromTrack(trk);return out;
+  }
+  if(vs!=null&&vs<-300&&alt!=null&&alt>12000){out.phase='DESCENT';out.cls='des';return out;}
+  if(vs!=null&&vs>400&&alt!=null&&alt<18000){out.phase='CLIMB';out.cls='dep';return out;}
+  if(alt!=null&&alt>=20000){out.phase='CRUISE';out.cls='crz';return out;}
+  if(d<25){out.phase='OVERFLIGHT';out.cls='enr';out.label=`near ${na.apt.ia}`;return out;}
+  out.phase='EN ROUTE';out.cls='enr';return out;
+}
+function phaseHtml(item){
+  const p=flightPhase(item);
+  const bits=[];
+  if(p.apt&&(p.cls==='app'||p.cls==='dep'||(p.label&&p.cls==='gnd')))
+    bits.push(p.cls==='dep'?`out of ${p.apt.ia}`:p.cls==='gnd'?(p.label?`${p.label}`:''):`${p.apt.ia}`);
+  if(p.runway)bits.push(`RWY&nbsp;${p.runway}`);
+  if(p.cls==='app'&&p.fromDir)bits.push(`from ${p.fromDir}`);
+  const sub=bits.filter(Boolean).join(' &middot; ');
+  return`<span class="phase ph-${p.cls}">${p.phase}</span>${sub?`<span class="phase-sub">${sub}</span>`:''}`;
+}
+/* Aircraft currently working a given airport (inbound / departing / on field) */
+function airportTraffic(a){
+  const inbound=[],departing=[],ground=[];
+  for(const it of S.allAC.values()){
+    if(it.lat==null)continue;
+    const p=flightPhase(it);
+    if(p.apt!==a)continue;
+    if(p.cls==='app')inbound.push({it,p});
+    else if(p.cls==='dep')departing.push({it,p});
+    else if(p.cls==='gnd'&&p.label)ground.push({it,p});
+  }
+  inbound.sort((x,y)=>(x.p.distNm)-(y.p.distNm));
+  departing.sort((x,y)=>(x.p.distNm)-(y.p.distNm));
+  return{inbound,departing,ground};
+}
+
 /* ── FILTER PREDICATE ────────────────────────────────────────────────────── */
 function passesFilter(item){
   const raw=item.raw||{};
@@ -164,9 +241,11 @@ function setBase(name){
 /* ── MAP SETUP ───────────────────────────────────────────────────────────── */
 function ensureMap(){
   if(S.map)return;
-  S.map=L.map('map',{zoomControl:true,attributionControl:false}).setView([-37.0,174.8],7);
+  S.map=L.map('map',{zoomControl:false,attributionControl:false}).setView([-37.0,174.8],7);
+  L.control.zoom({position:'bottomright'}).addTo(S.map);
   S.basePane=S.map.createPane('basePane');S.basePane.style.zIndex=100;
   S.ringLayer=L.layerGroup().addTo(S.map);
+  S.approachLayer=L.layerGroup().addTo(S.map);
   S.trailLayer=L.layerGroup().addTo(S.map);
   S.airportLayer=L.layerGroup().addTo(S.map);
   S.planeLayer=L.layerGroup().addTo(S.map);
@@ -193,6 +272,27 @@ function drawRings(){
 }
 
 /* ── AIRPORTS OVERLAY ────────────────────────────────────────────────────── */
+function airportPopup(a){
+  const{inbound,departing,ground}=airportTraffic(a);
+  const line=({it,p})=>{
+    const reg=it.reg||it.hex||'Aircraft';
+    const cs=norm(it.raw?.flight||it.callsign);
+    const extra=p.runway?` RWY ${p.runway}`:'';
+    const from=p.cls==='app'&&p.fromDir?` · from ${p.fromDir}`:'';
+    return`<button class="apt-ac" onclick="window.__sel('${it.key}')"><span>${reg}${cs?' · '+cs:''}</span><span class="apt-ac-r">${p.phase}${extra}${from} · ${fmtDist(p.distNm)}</span></button>`;
+  };
+  let h=`<div class="pp-reg" style="color:var(--C)">${a.ia} &middot; ${a.ic}</div>
+    <div class="pp-row"><b>${a.n}</b><br>${a.c}</div>
+    <div class="apt-stats">
+      <span class="apt-stat"><b>${inbound.length}</b> inbound</span>
+      <span class="apt-stat"><b>${departing.length}</b> departing</span>
+      <span class="apt-stat"><b>${ground.length}</b> on field</span>
+    </div>`;
+  if(inbound.length)h+=`<div class="apt-h ph-app">ON APPROACH</div>${inbound.slice(0,4).map(line).join('')}`;
+  if(departing.length)h+=`<div class="apt-h ph-dep">DEPARTING</div>${departing.slice(0,3).map(line).join('')}`;
+  if(!inbound.length&&!departing.length)h+=`<div class="apt-none">No arrivals or departures detected in range.</div>`;
+  return h;
+}
 function renderAirports(){
   S.airportLayer.clearLayers();
   if(!S.overlays.airports||!S.map)return;
@@ -201,12 +301,15 @@ function renderAirports(){
   for(const a of AIRPORTS){
     if(!b.contains([a.lat,a.lon]))continue;
     if(!a.big&&z<7)continue;                 // hide minor fields when zoomed out
-    const r=a.big?5:3.4;
+    const{inbound,departing}=airportTraffic(a);
+    const active=inbound.length>0;
+    const r=a.big?5.5:3.6;
     L.circleMarker([a.lat,a.lon],{
-      radius:r,color:'#9fb6d8',weight:1.4,fillColor:'#1a2740',fillOpacity:.9,
+      radius:r,color:active?'#e8a020':'#9fb6d8',weight:active?2:1.4,
+      fillColor:active?'#3a2c0e':'#15233c',fillOpacity:.92,
     }).addTo(S.airportLayer)
-      .bindTooltip(a.ia,{permanent:z>=8,direction:'right',offset:[6,0],className:'apt-tip'})
-      .bindPopup(`<div class="pp-reg" style="color:var(--C)">${a.ia} · ${a.ic}</div><div class="pp-row"><b>${a.n}</b><br>${a.c}</div>`);
+      .bindTooltip(`${a.ia}${inbound.length?' \u2193'+inbound.length:''}`,{permanent:z>=8,direction:'right',offset:[6,0],className:'apt-tip'})
+      .bindPopup(airportPopup(a),{maxWidth:280,className:'apt-popup'});
   }
 }
 
@@ -438,6 +541,20 @@ function renderMap(){
     }
   }
   drawRings();renderAirports();renderPlaneLayer();
+  // approach/departure vector for the selected aircraft
+  S.approachLayer.clearLayers();
+  const selItem=S.selectedKey?S.allAC.get(S.selectedKey):null;
+  if(selItem&&selItem.lat!=null){
+    const p=flightPhase(selItem);
+    if((p.cls==='app'||p.cls==='dep')&&p.apt){
+      const col=p.cls==='app'?'#e8a020':'#22b4f0';
+      L.polyline([[selItem.lat,selItem.lon],[p.apt.lat,p.apt.lon]],
+        {color:col,weight:1.6,opacity:.8,dashArray:'4 6'}).addTo(S.approachLayer);
+      L.circleMarker([p.apt.lat,p.apt.lon],{radius:4,color:col,weight:2,fillColor:col,fillOpacity:.5})
+        .addTo(S.approachLayer)
+        .bindTooltip(`${p.phase} · ${p.apt.ia}${p.runway?' RWY '+p.runway:''}`,{permanent:false,direction:'top',className:'apt-tip'});
+    }
+  }
   const bounds=[];
   if(S.user)bounds.push([S.user.lat,S.user.lon]);
   S.nearbyFiltered.forEach(i=>bounds.push([i.lat,i.lon]));
@@ -460,6 +577,7 @@ function makeNearestHtml(item){
   const{label,cls}=AC.acCategory(AC.classifyAC(live));
   const dirTxt=item.bearing!=null?`${compass(item.bearing)} of you`:'';
   return`<div class="nc-ey">PRIMARY TARGET &middot; NEAREST &middot; ${fmtDist(item.distNm)}${dirTxt?' &middot; '+dirTxt:''}</div>
+<div class="phase-row">${phaseHtml(item)}</div>
 <div class="nc-body">
   <div class="ac-photo">${photo?`<img src="${photo}" alt="">`:'NO PHOTO'}</div>
   <div class="nc-main">
@@ -496,6 +614,7 @@ function makeSelectedHtml(item){
   const sq=sqInfo(live.squawk||item.raw?.squawk);
   const air=isAirborne(live);
   const hex=meta.mode_s||item.hex||'';
+  const ph=flightPhase(item);
   const rows=[
     ['REG',reg,'amb'],
     cs?['C/S',cs,'live']:null,
@@ -508,6 +627,8 @@ function makeSelectedHtml(item){
     ['G/S',fmtSpd(live),''],
     ['TRK',fmtTrack(live),''],
     ['V/S',fmtClimb(live),''],
+    ph.apt?['FIELD',`${ph.apt.ia} \u00b7 ${fmtDist(ph.distNm)}`,'']:null,
+    (ph.runway&&(ph.cls==='app'||ph.cls==='dep'))?['RWY (est)',ph.runway,'amb']:null,
     ['DIST',fmtDist(item.distNm),''],
     ['BRG',item.bearing!=null?`${Math.round(item.bearing)}\u00b0 ${compass(item.bearing)}`:'\u2014',''],
     ['POSN',fmtCoords(pickN(live.lat,live.latitude),pickN(live.lon,live.longitude)),''],
@@ -518,6 +639,7 @@ function makeSelectedHtml(item){
     <a href="https://flightaware.com/live/flight/${encodeURIComponent(cs||reg)}" target="_blank" rel="noopener">FlightAware \u2197</a>
   </div>`:'';
   return`${photo?`<div class="sph"><img src="${photo}" alt=""></div>`:''}
+<div class="phase-row">${phaseHtml(item)}</div>
 <div class="sel-split">
   ${altTape(live)}
   <div class="dtbl">${rows.map(([k,v,c])=>`<div class="drow"><span class="dk">${k}</span><span class="dv ${c||''}">${v||'\u2014'}</span></div>`).join('')}</div>
@@ -537,11 +659,14 @@ function renderNearbyList(){
     const sq=sqInfo(item.raw?.squawk);
     const type=item.raw?.t||item.raw?.type||'';
     const{label,cls}=AC.acCategory(AC.classifyAC(item.raw||{}));
+    const ph=flightPhase(item);
+    const phTag=(ph.cls==='app'||ph.cls==='dep')?`<span class="nb-ph ph-${ph.cls}">${ph.cls==='app'?'APP':'DEP'} ${ph.apt?ph.apt.ia:''}${ph.runway?'/'+ph.runway:''}</span>`:'';
     const btn=document.createElement('button');
     btn.className=`nb-btn${item.key===S.selectedKey?' active':''}`;
     btn.innerHTML=`<div class="nb-l">
       <div class="nb-reg">${item.reg||item.hex||'Aircraft'}</div>
       <div class="nb-meta">${cs||'\u2014'} \u00b7 ${type||'?'}${sq&&sq.alert?` <span class="nb-sq">\u00b7 ${sq.code}</span>`:''}</div>
+      ${phTag}
     </div>
     <div class="nb-r">
       <div class="nb-dist">${fmtDist(item.distNm)}</div>
@@ -585,7 +710,7 @@ function renderStats(){
 
   el('catBars').innerHTML=AC.CHIPS.map(c=>{
     const n=byChip[c];const w=(n/maxChip*100).toFixed(0);
-    const clsMap={HEAVY:'--ch',AIRLINE:'--ca',BIZJET:'--cb',GA:'--cg',ROTOR:'--cr',MILITARY:'--cm',OTHER:'--cx'};
+    const clsMap={HEAVY:'--ch',AIRLINE:'--ca',BIZJET:'--cb',GA:'--cg',ROTOR:'--cr',MILITARY:'--cm',GROUND:'--cgr',OTHER:'--cx'};
     return`<div class="bar-row"><span class="bar-k">${c}</span>
       <span class="bar-t"><span class="bar-f" style="width:${w}%;background:var(${clsMap[c]})"></span></span>
       <span class="bar-v">${n}</span></div>`;
@@ -672,6 +797,7 @@ async function selectAircraft(key){
   el('selCard').innerHTML=makeSelectedHtml(item);
   el('selPill').textContent=item.reg||item.hex||'AIRCRAFT';
   renderNearbyList();renderPlaneLayer();
+  if(S.map)renderMap();
   if(S.map&&item.lat!=null)S.map.panTo([item.lat,item.lon],{animate:true});
   try{
     const{meta,route}=await fetchAcInfo(item);
