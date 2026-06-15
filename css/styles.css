@@ -345,3 +345,10 @@ input[type=range]{height:3px;border-radius:999px;}
   color:#d99a3a!important;font-family:var(--mono)!important;font-size:8px!important;font-weight:700!important;
   letter-spacing:.04em!important;padding:0 3px!important;box-shadow:none!important;white-space:nowrap;text-align:center;}
 .proc-lbl::before{display:none!important;}
+
+/* ── v6 · AIRPORT POPUP: RUNWAYS + FREQUENCIES ───────────────────────────── */
+.apt-rwy{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:10px;color:var(--tx);padding:2px 0;}
+.apt-rwy span:first-child{color:var(--mu2);font-weight:700;letter-spacing:.04em;}
+.apt-freqs{display:flex;flex-wrap:wrap;gap:4px 8px;}
+.apt-freq{font-family:var(--mono);font-size:10px;color:var(--tx);}
+.apt-freq b{color:var(--mu2);font-weight:700;font-size:8px;letter-spacing:.06em;margin-right:2px;}
