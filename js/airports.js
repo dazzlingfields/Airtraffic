@@ -18,6 +18,11 @@ window.AIRPORTS = [
   {ic:'NZPM',ia:'PMR',n:'Palmerston North',c:'Palmerston Nth',lat:-40.3206,lon:175.6172,big:0},
   {ic:'NZNP',ia:'NPL',n:'New Plymouth',c:'New Plymouth',lat:-39.0086,lon:174.1794,big:0},
   {ic:'NZIV',ia:'IVC',n:'Invercargill',c:'Invercargill',lat:-46.4124,lon:168.3128,big:0},
+  {ic:'NZAR',ia:'AMZ',n:'Ardmore',c:'Auckland',lat:-37.0297,lon:174.9733,big:0},
+  {ic:'NZNE',ia:'',n:'North Shore',c:'Dairy Flat',lat:-36.6586,lon:174.6550,big:0},
+  {ic:'NZWP',ia:'',n:'Whenuapai',c:'Auckland',lat:-36.7878,lon:174.6303,big:0},
+  {ic:'NZTG',ia:'TRG',n:'Tauranga',c:'Tauranga',lat:-37.6719,lon:176.1961,big:0},
+  {ic:'NZGS',ia:'GIS',n:'Gisborne',c:'Gisborne',lat:-38.6633,lon:177.9783,big:0},
 
   /* ── Australia ── */
   {ic:'YSSY',ia:'SYD',n:'Sydney Kingsford Smith',c:'Sydney',lat:-33.9461,lon:151.1772,big:1},

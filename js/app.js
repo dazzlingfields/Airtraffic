@@ -23,7 +23,7 @@ const STORE='overhead.settings.v2';
 const S={
   map:null,user:null,
   basePane:null,baseLayer:null,
-  ringLayer:null,trailLayer:null,airportLayer:null,planeLayer:null,userLayer:null,approachLayer:null,aeroLayer:null,
+  ringLayer:null,trailLayer:null,airportLayer:null,procLayer:null,planeLayer:null,userLayer:null,approachLayer:null,aeroLayer:null,
   nearby:[],nearbyFiltered:[],
   allAC:new Map(),histories:new Map(),
   selectedKey:null,selectedInfo:null,
@@ -34,7 +34,7 @@ const S={
   units:'imperial',           // imperial|metric
   follow:false,
   openaipKey:'388e7444c5966dcb282adac4bef1a843',aeroOpacity:0.9,
-  overlays:{trails:true,rings:true,airports:true,labels:false,weather:false,aero:false},
+  overlays:{trails:true,rings:true,airports:true,labels:false,weather:false,aero:false,proc:false},
   wx:{frames:[],host:'',idx:0,layers:{},playing:false,timer:null,opacity:0.6},
 };
 
@@ -60,9 +60,17 @@ function bearing(la1,lo1,la2,lo2){
   return (Math.atan2(y,x)*D2R+360)%360;
 }
 const compass=deg=>DIRS[Math.round(((deg%360)+360)%360/22.5)%16];
+function destPoint(lat,lon,brgDeg,distNm){      // project a point along a bearing (NM)
+  const Rk=6371,d=(distNm*1.852)/Rk,b=brgDeg*R2D,la1=lat*R2D,lo1=lon*R2D;
+  const la2=Math.asin(Math.sin(la1)*Math.cos(d)+Math.cos(la1)*Math.sin(d)*Math.cos(b));
+  const lo2=lo1+Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(la1),Math.cos(d)-Math.sin(la1)*Math.sin(la2));
+  return [la2*D2R,(((lo2*D2R)+540)%360)-180];
+}
 
 /* ── FORMATTERS (unit aware) ─────────────────────────────────────────────── */
-const M=()=>S.units==='metric';
+/* units: imperial (ft/kt/NM) · metric (m/km·h/km) · hybrid (ft/kt/km) */
+const M=()=>S.units==='metric';                                  // alt / speed / climb
+const Mdist=()=>S.units==='metric'||S.units==='hybrid';          // distance only
 const altRaw=ac=>ac?.alt_baro??ac?.altitude??ac?.alt;
 function fmtAlt(ac){
   const v=altRaw(ac);
@@ -77,7 +85,7 @@ function fmtSpd(ac){
 }
 function fmtDist(nm){
   if(nm==null||!isFinite(nm))return'\u2014';
-  return M()?`${(nm*1.852).toFixed(1)}\u202fkm`:`${nm.toFixed(1)}\u202fNM`;
+  return Mdist()?`${(nm*1.852).toFixed(1)}\u202fkm`:`${nm.toFixed(1)}\u202fNM`;
 }
 const fmtCoords=(la,lo)=>la==null||lo==null?'\u2014':`${la.toFixed(4)}, ${lo.toFixed(4)}`;
 function fmtAgo(v){
@@ -300,12 +308,14 @@ function ensureMap(){
   S.approachLayer=L.layerGroup().addTo(S.map);
   S.trailLayer=L.layerGroup().addTo(S.map);
   S.airportLayer=L.layerGroup().addTo(S.map);
+  S.procLayer=L.layerGroup().addTo(S.map);
   S.planeLayer=L.layerGroup().addTo(S.map);
   S.userLayer=L.layerGroup().addTo(S.map);
   setBase(S.base);
   S.map.on('moveend',()=>{
     clearTimeout(S.panTimer);
     updateMapStatus();
+    if(S.overlays.proc)renderProcedures();
     S.panTimer=setTimeout(()=>{fetchForView();if(S.overlays.airports)renderAirports();},PAN_DEBOUNCE);
   });
   S.map.on('move',updateMapStatus);
@@ -320,7 +330,7 @@ function drawRings(){
   [50,100,150].forEach(nm=>{
     L.circle([S.user.lat,S.user.lon],{radius:nm*1852,color:'var(--C)',opacity:.22,fill:false,weight:1,dashArray:'3 7'}).addTo(S.ringLayer);
     L.marker([S.user.lat+(nm*1852)/111320,S.user.lon],{
-      icon:L.divIcon({className:'ring-lbl',html:`${M()?Math.round(nm*1.852)+'km':nm+'NM'}`,iconSize:[44,14],iconAnchor:[22,7]}),
+      icon:L.divIcon({className:'ring-lbl',html:`${Mdist()?Math.round(nm*1.852)+'km':nm+'NM'}`,iconSize:[44,14],iconAnchor:[22,7]}),
       interactive:false}).addTo(S.ringLayer);
   });
 }
@@ -364,6 +374,38 @@ function renderAirports(){
     }).addTo(S.airportLayer)
       .bindTooltip(`${a.ia}${inbound.length?' \u2193'+inbound.length:''}`,{permanent:z>=8,direction:'right',offset:[6,0],className:'apt-tip'})
       .bindPopup(airportPopup(a),{maxWidth:280,className:'apt-popup'});
+  }
+}
+
+/* ── ARRIVAL / DEPARTURE PROCEDURES ──────────────────────────────────────────
+   Derived from real runway alignment (window.RWY): extended final-approach
+   centrelines, final-approach-fix markers, and runway-end labels. These are a
+   schematic of approach/departure paths, NOT charted SID/STAR/IAP plates. */
+function renderProcedures(){
+  if(!S.procLayer)return;
+  S.procLayer.clearLayers();
+  if(!S.overlays.proc||!S.map||!window.RWY)return;
+  const z=S.map.getZoom();
+  if(z<8)return;                                  // avoid clutter when zoomed out
+  const b=S.map.getBounds().pad(0.2);
+  const FINAL_NM=10,FAF_NM=5;                      // ~10 NM final, FAF ~5 NM
+  for(const a of AIRPORTS){
+    const rwys=window.RWY[a.ic];
+    if(!rwys||!rwys.length||!b.contains([a.lat,a.lon]))continue;
+    for(const brg of rwys){
+      const b1=(((brg%360)+360)%360),b2=(b1+180)%360;
+      const t1=destPoint(a.lat,a.lon,b1,FINAL_NM),t2=destPoint(a.lat,a.lon,b2,FINAL_NM);
+      // extended centreline through the field (covers both runway ends' finals)
+      L.polyline([t1,[a.lat,a.lon],t2],{pane:'overlayPane',color:'#d99a3a',weight:1.3,opacity:.5,dashArray:'5 6'}).addTo(S.procLayer);
+      [b1,b2].forEach(bb=>{
+        const faf=destPoint(a.lat,a.lon,bb,FAF_NM);
+        L.circleMarker(faf,{pane:'overlayPane',radius:2.3,color:'#d99a3a',weight:1,opacity:.75,fillColor:'#d99a3a',fillOpacity:.5}).addTo(S.procLayer);
+        // landing runway when approaching from this end = heading toward the field
+        let num=Math.round(((bb+180)%360)/10);if(num===0)num=36;if(num>36)num-=36;
+        L.marker(destPoint(a.lat,a.lon,bb,FINAL_NM),{pane:'overlayPane',interactive:false,
+          icon:L.divIcon({className:'proc-lbl',html:`RWY ${String(num).padStart(2,'0')}`,iconSize:[46,13],iconAnchor:[23,6.5]})}).addTo(S.procLayer);
+      });
+    }
   }
 }
 
@@ -594,7 +636,7 @@ function renderMap(){
       }
     }
   }
-  drawRings();renderAirports();renderPlaneLayer();
+  drawRings();renderAirports();renderProcedures();renderPlaneLayer();
   // approach/departure vector for the selected aircraft
   S.approachLayer.clearLayers();
   const selItem=S.selectedKey?S.allAC.get(S.selectedKey):null;
@@ -947,7 +989,7 @@ function wireUI(){
   el('fEmg').onclick=()=>{F.emergencyOnly=!F.emergencyOnly;syncFilterUI();saveSettings();renderAll();};
   el('fReset').onclick=()=>{F.q='';F.cats=new Set(AC.CHIPS);F.altMin=0;F.altMax=45000;F.airborneOnly=F.militaryOnly=F.emergencyOnly=false;syncFilterUI();saveSettings();renderAll();};
   // units / theme / follow
-  el('unitBtn').onclick=()=>{S.units=M()?'imperial':'metric';el('unitBtn').textContent='UNITS · '+(M()?'METRIC':'IMPERIAL');saveSettings();renderAll();syncFilterUI();drawRings();};
+  el('unitBtn').onclick=()=>{S.units=S.units==='imperial'?'metric':S.units==='metric'?'hybrid':'imperial';el('unitBtn').textContent='UNITS · '+S.units.toUpperCase();saveSettings();renderAll();syncFilterUI();drawRings();};
   el('themeBtn').onclick=()=>{S.theme=S.theme==='auto'?'dark':S.theme==='dark'?'light':'auto';applyTheme();saveSettings();};
   el('followBtn').onclick=()=>{S.follow=!S.follow;el('followBtn').classList.toggle('on',S.follow);el('followBtn').textContent=S.follow?'FOLLOW · ON':'FOLLOW · OFF';saveSettings();if(S.follow){const t=(S.selectedKey&&S.allAC.get(S.selectedKey))||S.nearbyFiltered[0];if(t&&t.lat!=null)S.map.panTo([t.lat,t.lon]);}};
   if(el('recenterBtn'))el('recenterBtn').onclick=()=>{if(S.user&&S.map)S.map.setView([S.user.lat,S.user.lon],Math.max(S.map.getZoom(),10),{animate:true});};
@@ -983,7 +1025,7 @@ function init(){
   if(window.matchMedia){const mq=window.matchMedia('(prefers-color-scheme: dark)');
     const h=()=>{if(S.theme==='auto')applyTheme();};
     mq.addEventListener?mq.addEventListener('change',h):mq.addListener(h);}
-  el('unitBtn').textContent='UNITS · '+(M()?'METRIC':'IMPERIAL');
+  el('unitBtn').textContent='UNITS · '+S.units.toUpperCase();
   el('followBtn').textContent=S.follow?'FOLLOW · ON':'FOLLOW · OFF';
   el('followBtn').classList.toggle('on',S.follow);
   ensureMap();wireUI();syncOverlayButtons();syncFilterUI();
