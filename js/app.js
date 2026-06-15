@@ -12,12 +12,21 @@ const DB='https://api.adsbdb.com/v0';
 const WX_API='https://api.rainviewer.com/public/weather-maps.json';
 const OPENAIP_TILES='https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png'; // worldwide aero chart (airspace/airways/navaids); needs free apiKey
 const KEY_STORE='overhead.openaip.key';
+const METAR_API='https://metar.vatsim.net';  // raw METAR, CORS-enabled (ACAO *), no key
 const USER_RANGE=150;        // NM, initial nearby query radius
-const REFRESH_MS=8000;       // live poll interval
+const REFRESH_MS=8000;       // live poll interval (nominal, healthy)
 const PAN_DEBOUNCE=900;
 const MAX_HIST=30;           // trail points kept per aircraft
 const MIN_REFETCH_NM=40;     // pan distance before refetching view
 const STORE='overhead.settings.v2';
+/* ── resilient data layer tunables ───────────────────────────────────────── */
+const FETCH_TIMEOUT=12000;   // ms before a hung request aborts
+const POLL_MAX=120000;       // ms, backoff ceiling
+const STALE_MS=24000;        // no good poll for this long => STALE (~3 cycles)
+const OFFLINE_MS=90000;      // => OFFLINE
+const RATE_FLOOR_MS=30000;   // min wait after an HTTP 429
+const METAR_TTL=300000;      // 5 min cache per field
+const MAX_ENRICH=2;          // adsbdb route look-ups started per poll (divert detect)
 
 /* ── STATE ───────────────────────────────────────────────────────────────── */
 const S={
@@ -36,7 +45,11 @@ const S={
   openaipKey:'388e7444c5966dcb282adac4bef1a843',aeroOpacity:0.9,
   overlays:{trails:true,rings:true,airports:true,labels:false,weather:false,aero:false,proc:false},
   wx:{frames:[],host:'',idx:0,layers:{},playing:false,timer:null,opacity:0.6},
+  metar:new Map(),            // ICAO -> {ts,raw,parsed,ok,pending?}
+  disruptLayer:null,disruptions:[],aptIndex:null,
 };
+/* network health for the resilient poll loop */
+const NET={fails:0,lastOk:0,nextAt:0,backoffUntil:0,rateLimited:false,polling:false};
 
 /* ── FILTERS ─────────────────────────────────────────────────────────────── */
 const F={q:'',cats:new Set(AC.CHIPS),altMin:0,altMax:45000,
@@ -134,6 +147,19 @@ function nearestAirport(lat,lon){
     if(km<bestKm){bestKm=km;best=a;}
   }
   return best?{apt:best,distNm:bestKm/1.852}:null;
+}
+/* Resolve an airport record from an ICAO or IATA code (lazy index, rebuilt if
+   the airport dataset grows after async load). */
+function aptByCode(code){
+  if(!code)return null;
+  const c=String(code).trim().toUpperCase();
+  if(!c)return null;
+  if(!S.aptIndex||S.aptIndex._n!==AIRPORTS.length){
+    const idx=new Map();idx._n=AIRPORTS.length;
+    for(const a of AIRPORTS){if(a.ic)idx.set(a.ic,a);if(a.ia&&!idx.has(a.ia))idx.set(a.ia,a);}
+    S.aptIndex=idx;
+  }
+  return S.aptIndex.get(c)||null;
 }
 const angDiff=(a,b)=>{let d=Math.abs((((a-b)%360)+360)%360);return d>180?360-d:d;};
 function rwyFromTrack(t){               // fallback: runway number from ground track
@@ -239,11 +265,31 @@ function setStatus(txt,tone='live'){
   el('sPill').style.color=tone==='live'?'var(--G)':tone==='warn'?'var(--A)':'var(--R)';
 }
 function tickCountdown(){
-  if(!S.lastUpdate)return;
-  const since=Math.round((Date.now()-S.lastUpdate)/1000);
-  const s=Math.max(0,Math.round((REFRESH_MS-(Date.now()-S.lastUpdate))/1000));
-  el('updPill').textContent=`SYNC ${s}s`;
-  setTxt('stAge',since+'s');
+  const now=Date.now();
+  const age=NET.lastOk?Math.round((now-NET.lastOk)/1000):null;
+  setTxt('stAge',age==null?'\u2014':age+'s');
+  const ae=el('stAge');if(ae)ae.style.color=(NET.lastOk&&(now-NET.lastOk)>STALE_MS)?'var(--R)':'';
+  if(S.user){
+    const left=Math.max(0,Math.round((NET.nextAt-now)/1000));
+    el('updPill').textContent=(NET.fails>0?'RETRY ':'SYNC ')+left+'s';
+  }
+  updateNetUI();
+}
+/* Single authority for steady-state connection status across pill, map badge. */
+function updateNetUI(){
+  if(!NET.lastOk&&!NET.fails)return;             // still locating / first poll in flight
+  const now=Date.now(),age=NET.lastOk?now-NET.lastOk:Infinity;
+  let tone,txt,stale=false;
+  if(NET.rateLimited){tone='bad';txt='RATE LIMITED';stale=true;}
+  else if(age>OFFLINE_MS){tone='bad';txt='OFFLINE';stale=true;}
+  else if(NET.fails>0){tone='warn';txt='RECONNECTING';stale=true;}
+  else if(age>STALE_MS){tone='warn';txt='STALE DATA';stale=true;}
+  else{const n=S.nearbyFiltered.length;tone=n?'live':'warn';txt=n?`${n} NEARBY`:'NO TRAFFIC NEARBY';}
+  setStatus(txt,tone);
+  const acft=`${S.allAC.size} ACFT`;
+  setTxt('trafficCount',stale?`${txt} \u00b7 ${acft}`:acft);
+  const bd=document.querySelector('.map-badge .sd');
+  if(bd)bd.className='sd'+(tone==='bad'?' bad':tone==='warn'?' warn':'');
 }
 
 /* ── BASE MAP TILES ──────────────────────────────────────────────────────── */
@@ -322,8 +368,10 @@ function ensureMap(){
   S.airportLayer=L.layerGroup().addTo(S.map);
   S.procLayer=L.layerGroup().addTo(S.map);
   S.planeLayer=L.layerGroup().addTo(S.map);
+  S.disruptLayer=L.layerGroup().addTo(S.map);
   S.userLayer=L.layerGroup().addTo(S.map);
   setBase(S.base);
+  S.map.on('popupopen',onPopupOpen);
   S.map.on('moveend',()=>{
     clearTimeout(S.panTimer);
     updateMapStatus();
@@ -332,7 +380,7 @@ function ensureMap(){
   });
   S.map.on('move',updateMapStatus);
   L.control.attribution({prefix:false,position:'bottomright'})
-    .addAttribution('© OpenStreetMap, CARTO, Esri · airplanes.live · adsbdb · RainViewer · OurAirports').addTo(S.map);
+    .addAttribution('© OpenStreetMap, CARTO, Esri · airplanes.live · adsbdb · RainViewer · OurAirports · METAR via VATSIM').addTo(S.map);
 }
 
 /* ── RANGE RINGS ─────────────────────────────────────────────────────────── */
@@ -364,6 +412,12 @@ function airportPopup(a){
       <span class="apt-stat"><b>${departing.length}</b> departing</span>
       <span class="apt-stat"><b>${ground.length}</b> on field</span>
     </div>`;
+  // live weather (METAR) — lazy, cache-aware
+  if(/^[A-Z0-9]{4}$/.test(String(a.ic||''))){
+    const c=S.metar.get(a.ic);
+    const ready=c&&c.ok!=null&&!c.pending;
+    h+=`<div class="apt-h">WEATHER</div><div class="apt-wx" data-icao="${a.ic}"${ready?' data-loaded="1"':''}>${ready?metarHtml(c):'<span class="wx-load">loading METAR\u2026</span>'}</div>`;
+  }
   // runways
   const rwys=window.RWY&&window.RWY[a.ic];
   if(rwys&&rwys.length){
@@ -506,8 +560,22 @@ function trailCol(spd,alt){
 }
 
 /* ── FETCH ───────────────────────────────────────────────────────────────── */
-async function fetchJSON(url,sig){
-  const r=await fetch(url,{signal:sig,mode:'cors'});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();
+/* Timeout-guarded JSON fetch. Throws Error with .status set on HTTP failure,
+   .timeout=true on abort, so callers can distinguish 429 / network / hang. */
+async function fetchJSON(url,opts){
+  const o=(opts&&typeof opts==='object')?opts:{};
+  const timeout=o.timeout||FETCH_TIMEOUT;
+  const ctrl=new AbortController();
+  let timedOut=false;
+  const to=setTimeout(()=>{timedOut=true;ctrl.abort();},timeout);
+  try{
+    const r=await fetch(url,{signal:ctrl.signal,mode:'cors'});
+    if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e;}
+    return await r.json();
+  }catch(e){
+    if(timedOut){const te=new Error('timeout');te.timeout=true;throw te;}
+    throw e;
+  }finally{clearTimeout(to);}
 }
 async function fetchAcInfo(item){
   const reg=item.reg||item.hex||item.key;
@@ -541,7 +609,7 @@ function mergeAircraft(aircraft,isUserQuery){
       bearing:S.user?bearing(S.user.lat,S.user.lon,lat,lon):null,
       reg:norm(ac.r||ac.reg),hex:norm(ac.hex),callsign:norm(ac.flight||ac.callsign),
       firstSeen:prev.firstSeen||now,raw:ac,live:ac,
-      meta:prev.meta||null,route:prev.route||null,
+      meta:prev.meta||null,route:prev.route||null,routeTried:prev.routeTried||false,
     };
     S.allAC.set(key,item);addHist(item);
   }
@@ -595,6 +663,229 @@ function routeHtml(route,live){
   </div>
   <div class="pbar"><div class="pfil" style="width:${pct}%"></div></div>
   <div class="pmeta"><span>${left}</span><span>${right}</span></div>`;
+}
+
+/* ── METAR (VATSIM relay · CORS-enabled · key-less) ──────────────────────────
+   aviationweather.gov has no CORS headers, so a static site can't read it from
+   the browser. metar.vatsim.net relays real-world METARs with ACAO:* and needs
+   no key. We fetch raw text lazily (on airport popup open), cache per field. */
+function parseMetar(raw){
+  if(!raw)return null;
+  let toks=raw.replace(/=$/,'').trim().split(/\s+/);
+  if(/^(METAR|SPECI)$/.test(toks[0]))toks.shift();
+  const station=toks.shift()||'';
+  const p={station,windDir:null,windSpd:null,windGust:null,vrb:false,
+    visM:null,visSm:null,cavok:false,wx:[],clouds:[],ceilingFt:Infinity,
+    tempC:null,dewC:null,qnhHpa:null,qnhInHg:null};
+  // recombine "1 1/2SM" fraction visibility
+  for(let i=0;i<toks.length-1;i++){
+    if(/^\d$/.test(toks[i])&&/^\d\/\dSM$/.test(toks[i+1])){toks[i]=toks[i]+' '+toks[i+1];toks.splice(i+1,1);}
+  }
+  const wxRe=/^(\+|-|VC)?((MI|PR|BC|DR|BL|SH|TS|FZ|RA|DZ|SN|SG|IC|PL|GR|GS|UP|FG|BR|SA|DU|HZ|FU|VA|PY|PO|SQ|FC|SS|DS)){1,3}$/;
+  for(const t of toks){
+    let m;
+    if((m=t.match(/^(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?(KT|MPS)$/))){
+      const f=m[4]==='MPS'?1.94384:1;
+      p.vrb=m[1]==='VRB';p.windDir=p.vrb?null:+m[1];
+      p.windSpd=Math.round(+m[2]*f);if(m[3])p.windGust=Math.round(+m[3]*f);continue;
+    }
+    if(t==='CAVOK'){p.cavok=true;p.visM=9999;continue;}
+    if(/^\d{4}$/.test(t)&&p.visM==null){p.visM=+t;continue;}
+    if((m=t.match(/^(M|P)?(\d+(?: \d\/\d)?|\d\/\d)SM$/))){
+      let v=m[2];let val;
+      if(v.includes(' ')){const[a,b]=v.split(' ');const[n,d]=b.split('/');val=+a+(+n/+d);}
+      else if(v.includes('/')){const[n,d]=v.split('/');val=+n/+d;}
+      else val=+v;
+      if(m[1]==='M')val=Math.max(0,val-0.01);    // M = less than
+      p.visSm=val;continue;                       // P = greater than: value is the floor
+    }
+    if((m=t.match(/^(FEW|SCT|BKN|OVC|VV)(\d{3})(CB|TCU)?$/))){
+      const base=+m[2]*100;p.clouds.push({cover:m[1],baseFt:base,type:m[3]||''});
+      if((m[1]==='BKN'||m[1]==='OVC'||m[1]==='VV')&&base<p.ceilingFt)p.ceilingFt=base;continue;
+    }
+    if(/^(SKC|CLR|NSC|NCD)$/.test(t))continue;
+    if((m=t.match(/^(M?\d{2})\/(M?\d{2})$/))){
+      const c=s=>s.startsWith('M')?-(+s.slice(1)):+s;p.tempC=c(m[1]);p.dewC=c(m[2]);continue;
+    }
+    if((m=t.match(/^Q(\d{3,4})$/))){p.qnhHpa=+m[1];continue;}
+    if((m=t.match(/^A(\d{4})$/))){p.qnhInHg=+m[1]/100;continue;}
+    if(wxRe.test(t)&&t!=='NSW')p.wx.push(t);
+  }
+  if(p.qnhHpa==null&&p.qnhInHg!=null)p.qnhHpa=Math.round(p.qnhInHg*33.8639);
+  if(p.qnhInHg==null&&p.qnhHpa!=null)p.qnhInHg=+(p.qnhHpa/33.8639).toFixed(2);
+  p.cat=metarCategory(p);
+  return p;
+}
+function metarCategory(p){
+  let sm=p.visSm;
+  if(sm==null&&p.visM!=null)sm=p.visM>=9999?10:p.visM/1609.34;
+  if(p.cavok)sm=10;
+  const ceil=p.ceilingFt;
+  if((ceil<500)||(sm!=null&&sm<1))return'LIFR';
+  if((ceil<1000)||(sm!=null&&sm<3))return'IFR';
+  if((ceil<=3000)||(sm!=null&&sm<=5))return'MVFR';
+  return'VFR';
+}
+const WX_WORDS={RA:'rain',SN:'snow',DZ:'drizzle',SH:'showers',TS:'thunderstorm',
+  FG:'fog',BR:'mist',HZ:'haze',FU:'smoke',GR:'hail',GS:'small hail',FZ:'freezing',
+  BL:'blowing',SQ:'squall',FC:'funnel cloud',SS:'sandstorm',DS:'duststorm',PL:'ice pellets'};
+function wxDecode(code){
+  let s=code.replace(/^(\+|-|VC)/,m=>m==='+'?'heavy ':m==='-'?'light ':'nearby ');
+  return s.replace(/MI|PR|BC|DR|BL|SH|TS|FZ|RA|DZ|SN|SG|IC|PL|GR|GS|UP|FG|BR|SA|DU|HZ|FU|VA|PY|PO|SQ|FC|SS|DS/g,m=>WX_WORDS[m]||m);
+}
+function getMetar(icao){
+  icao=String(icao||'').toUpperCase();
+  if(!/^[A-Z0-9]{4}$/.test(icao))return Promise.resolve(null);
+  const c=S.metar.get(icao);
+  if(c&&c.pending)return c.pending;
+  if(c&&c.ok!=null&&Date.now()-c.ts<METAR_TTL)return Promise.resolve(c);
+  const pending=(async()=>{
+    try{
+      const ctrl=new AbortController();const to=setTimeout(()=>ctrl.abort(),10000);
+      let txt;
+      try{const r=await fetch(`${METAR_API}/${icao}`,{signal:ctrl.signal});if(!r.ok)throw 0;txt=await r.text();}
+      finally{clearTimeout(to);}
+      txt=String(txt||'').trim();
+      if(!txt||txt.length<5||/no metar/i.test(txt))throw 0;
+      const raw=txt.split('\n')[0].trim();
+      const rec={ts:Date.now(),raw,parsed:parseMetar(raw),ok:true};
+      S.metar.set(icao,rec);return rec;
+    }catch(_){const rec={ts:Date.now(),raw:null,parsed:null,ok:false};S.metar.set(icao,rec);return rec;}
+  })();
+  S.metar.set(icao,{ts:Date.now(),pending});
+  return pending;
+}
+function metarHtml(rec){
+  if(!rec||!rec.ok||!rec.parsed)return`<span class="wx-load">METAR unavailable for this field.</span>`;
+  const p=rec.parsed;
+  const cat=p.cat||'VFR';
+  const wind=p.vrb?`VRB ${p.windSpd}kt`
+    :(p.windSpd===0?'Calm':`${String(p.windDir).padStart(3,'0')}\u00b0 ${p.windSpd}kt${p.windGust?` G${p.windGust}`:''}`);
+  let vis='\u2014';
+  if(p.cavok)vis='CAVOK';
+  else if(p.visM!=null)vis=p.visM>=9999?'10\u202fkm+':Mdist()?`${(p.visM/1000).toFixed(1)}\u202fkm`:`${(p.visM/1609.34).toFixed(1)}\u202fsm`;
+  else if(p.visSm!=null)vis=Mdist()?`${(p.visSm*1.609).toFixed(1)}\u202fkm`:`${p.visSm}\u202fsm`;
+  const ceil=isFinite(p.ceilingFt)?(Mdist()?`${Math.round(p.ceilingFt*0.3048)}\u202fm`:`${p.ceilingFt.toLocaleString()}\u202fft`):'none';
+  const wxTxt=p.wx.length?p.wx.map(wxDecode).join(', '):'';
+  const td=(p.tempC!=null)?`${p.tempC}\u00b0/${p.dewC}\u00b0C`:'\u2014';
+  const qnh=p.qnhHpa!=null?`${p.qnhHpa} hPa`:(p.qnhInHg!=null?`${p.qnhInHg.toFixed(2)} inHg`:'\u2014');
+  const low=(cat==='IFR'||cat==='LIFR');
+  return`<div class="wx-line"><span class="wx-cat wx-${cat.toLowerCase()}">${cat}</span>
+    <span class="wx-rows">
+      <span><b>Wind</b> ${wind}</span><span><b>Vis</b> ${vis}</span>
+      <span><b>Ceil</b> ${ceil}</span><span><b>Temp</b> ${td}</span><span><b>QNH</b> ${qnh}</span>
+      ${wxTxt?`<span><b>Wx</b> ${wxTxt}</span>`:''}
+    </span></div>
+    ${low?`<div class="wx-note">Low conditions (${cat}) \u2014 holds and diversions possible.</div>`:''}
+    <div class="wx-raw">${rec.raw}</div>`;
+}
+function onPopupOpen(e){
+  const root=e.popup&&e.popup.getElement&&e.popup.getElement();
+  if(!root)return;
+  const slot=root.querySelector('.apt-wx[data-icao]');
+  if(!slot||slot.dataset.loaded==='1')return;
+  const icao=slot.dataset.icao;
+  getMetar(icao).then(rec=>{
+    if(!document.body.contains(slot))return;
+    slot.dataset.loaded='1';slot.innerHTML=metarHtml(rec);
+  });
+}
+
+/* ── DISRUPTIONS · diversions · holding · emergencies ─────────────────────────
+   Client-side anomaly detection over tracked traffic. Diversion needs adsbdb
+   route metadata (origin/destination); holding is derived from trail geometry.
+   All heuristic and clearly labelled — situational awareness, not truth. */
+function loiterMetric(key){
+  const pts=S.histories.get(key);
+  if(!pts||pts.length<6)return null;
+  const seg=pts.slice(-10);
+  let path=0;
+  for(let i=1;i<seg.length;i++)path+=hav(seg[i-1].lat,seg[i-1].lon,seg[i].lat,seg[i].lon);
+  if(path<2)return null;                          // km travelled too small to judge
+  const net=hav(seg[0].lat,seg[0].lon,seg[seg.length-1].lat,seg[seg.length-1].lon);
+  return{ratio:net>0.1?path/net:99,pathKm:path};
+}
+function detectDisruptions(force){
+  if(!force&&S._disTs&&Date.now()-S._disTs<300)return S.disruptions;
+  const out=[];
+  for(const it of S.allAC.values()){
+    if(it.lat==null)continue;
+    const raw=it.raw||{};
+    if(isEmergency(raw)){
+      const sq=sqInfo(raw.squawk);
+      out.push({it,kind:'EMG',sev:3,reason:sq?.label||'EMERGENCY',detail:`squawk ${sq?.code||''}`.trim()});
+      continue;
+    }
+    if(!isAirborne(raw))continue;
+    const ph=flightPhase(it);
+    // diversion / return to origin (requires route)
+    const route=it.route;
+    if(route&&ph.cls==='app'&&ph.apt){
+      const destC=route.destination?.icao_code||route.destination?.iata_code;
+      const origC=route.origin?.icao_code||route.origin?.iata_code;
+      const dest=aptByCode(destC),orig=aptByCode(origC);
+      const landingIc=ph.apt.ic;
+      const destIc=dest?.ic||String(route.destination?.icao_code||'').toUpperCase();
+      if(destIc&&landingIc&&landingIc!==destIc){
+        const sameArea=dest&&nmBtw([ph.apt.lat,ph.apt.lon],[dest.lat,dest.lon])<25;
+        if(!sameArea){
+          const isReturn=orig&&orig.ic===landingIc;
+          out.push({it,kind:isReturn?'RTN':'DIV',sev:2,
+            reason:isReturn?'RETURN TO ORIGIN':'LIKELY DIVERSION',
+            detail:`${ph.phase} ${ph.apt.ia||ph.apt.ic} \u00b7 filed ${route.destination?.iata_code||destIc}`});
+          continue;
+        }
+      }
+    }
+    // holding / circling (trail geometry)
+    const lo=loiterMetric(it.key);
+    const gs=pickN(raw.gs,raw.speed,raw.ground_speed)||0;
+    const alt=altNumeric(raw);
+    if(lo&&lo.ratio>2.6&&lo.pathKm>6&&gs>60&&alt!=null&&alt>1500){
+      out.push({it,kind:'HOLD',sev:1,reason:'HOLDING / CIRCLING',detail:ph.apt?`near ${ph.apt.ia||ph.apt.ic}`:'orbiting'});
+    }
+  }
+  out.sort((a,b)=>b.sev-a.sev||((a.it.distNm||9e9)-(b.it.distNm||9e9)));
+  S._disTs=Date.now();S.disruptions=out;return out;
+}
+function renderDisruptions(){
+  const box=el('disList');if(!box)return;
+  const list=detectDisruptions(true);
+  const cnt=el('disCount');
+  if(cnt){cnt.textContent=String(list.length);cnt.classList.toggle('hot',list.some(d=>d.sev>=3));}
+  if(!list.length){box.innerHTML='<div class="empty">No diversions, holds or emergencies detected.</div>';return;}
+  box.innerHTML='';
+  const badge={EMG:'dis-emg',DIV:'dis-div',RTN:'dis-div',HOLD:'dis-hold'};
+  const tag={EMG:'EMERGENCY',DIV:'DIVERT',RTN:'RETURN',HOLD:'HOLD'};
+  list.slice(0,8).forEach(d=>{
+    const it=d.it;const cs=norm(it.raw?.flight||it.callsign);
+    const b=document.createElement('button');
+    b.className=`nb-btn dis-btn${it.key===S.selectedKey?' active':''}`;
+    b.innerHTML=`<div class="nb-l">
+        <div class="nb-reg">${it.reg||it.hex||'Aircraft'}<span class="dis-tag ${badge[d.kind]}">${tag[d.kind]}</span></div>
+        <div class="nb-meta">${d.reason}${cs?' \u00b7 '+cs:''}</div>
+        <div class="dis-detail">${d.detail||''}</div>
+      </div>
+      <div class="nb-r"><div class="nb-dist">${fmtDist(it.distNm)}</div></div>`;
+    b.onclick=()=>selectAircraft(it.key);
+    box.appendChild(b);
+  });
+}
+/* Opportunistically pull route data for approach-phase traffic that lacks it,
+   so diversions can be detected. Throttled hard to respect adsbdb. */
+function enrichApproaches(){
+  let n=0;
+  for(const it of S.nearby){
+    if(n>=MAX_ENRICH)break;
+    if(it.route||it.routeTried||!isAirborne(it.raw))continue;
+    const ph=flightPhase(it);
+    if(ph.cls!=='app'&&ph.phase!=='DESCENT')continue;
+    it.routeTried=true;n++;
+    fetchAcInfo(it).then(({meta,route})=>{
+      if(meta&&!it.meta)it.meta=meta;
+      if(route){it.route=route;renderDisruptions();}
+    }).catch(()=>{});
+  }
 }
 
 /* ── ALTITUDE TAPE (signature element) ───────────────────────────────────── */
@@ -714,6 +1005,17 @@ function renderMap(){
       L.circleMarker([p.apt.lat,p.apt.lon],{radius:4,color:col,weight:2,fillColor:col,fillOpacity:.5})
         .addTo(S.approachLayer)
         .bindTooltip(`${p.phase} · ${p.apt.ia}${p.runway?' RWY '+p.runway:''}`,{permanent:false,direction:'top',className:'apt-tip'});
+    }
+  }
+  // disruption markers (emergencies / diversions / holds)
+  if(S.disruptLayer){
+    S.disruptLayer.clearLayers();
+    for(const d of detectDisruptions().slice(0,12)){
+      const it=d.it;if(it.lat==null)continue;
+      const col=d.sev>=3?'#ef4b4b':d.sev>=2?'#f0a830':'#e8a020';
+      L.marker([it.lat,it.lon],{interactive:false,pane:'overlayPane',
+        icon:L.divIcon({className:'',html:`<div class="dis-ring" style="border-color:${col}"></div>`,iconSize:[34,34],iconAnchor:[17,17]})})
+        .addTo(S.disruptLayer);
     }
   }
   const bounds=[];
@@ -915,7 +1217,7 @@ function renderAll(){
   el('nearestCard').innerHTML=S.nearbyFiltered.length?makeNearestHtml(S.nearbyFiltered[0]):'<div class="empty">No active returns match the current filters.</div>';
   el('selCard').innerHTML=makeSelectedHtml(S.selectedInfo);
   el('selPill').textContent=S.selectedInfo?(S.selectedInfo.reg||S.selectedInfo.hex||'AIRCRAFT'):'NONE';
-  renderNearbyList();renderStats();renderEmergency();renderPlaneLayer();
+  renderNearbyList();renderStats();renderEmergency();renderDisruptions();renderPlaneLayer();
   if(S.overlays.trails)renderMap();
 }
 
@@ -928,8 +1230,7 @@ async function loadNearby(){
   if(!S.selectedKey||!S.allAC.has(S.selectedKey))S.selectedKey=S.nearbyFiltered[0]?.key||null;
   S.selectedInfo=S.selectedKey?S.allAC.get(S.selectedKey)||null:null;
   renderMap();renderAll();
-  el('trafficCount').textContent=`${S.allAC.size} ACFT`;updateMapStatus();
-  setStatus(S.nearbyFiltered.length?`${S.nearbyFiltered.length} NEARBY`:'NO TRAFFIC NEARBY',S.nearbyFiltered.length?'live':'warn');
+  updateMapStatus();
   if(S.follow&&S.map){const t=(S.selectedKey&&S.allAC.get(S.selectedKey))||S.nearbyFiltered[0];if(t&&t.lat!=null)S.map.panTo([t.lat,t.lon],{animate:true});}
   const nearest=S.nearbyFiltered[0];
   if(nearest&&!nearest.meta&&!nearest.route){
@@ -939,8 +1240,37 @@ async function loadNearby(){
     }).catch(()=>{});
   }
 }
+/* Resilient self-scheduling poll loop: exponential backoff + jitter on failure,
+   longer floor on HTTP 429, immediate reset on manual SYNC. Never overlaps. */
+function scheduleNext(delay){
+  clearTimeout(S.refreshTimer);
+  NET.nextAt=Date.now()+delay;
+  S.refreshTimer=setTimeout(()=>poll(false),delay);
+}
+async function poll(manual){
+  if(!S.user)return;
+  if(NET.polling){if(manual)scheduleNext(0);return;}
+  if(manual){NET.fails=0;NET.rateLimited=false;NET.backoffUntil=0;setStatus('SYNC\u2026','warn');}
+  NET.polling=true;
+  try{
+    await loadNearby();
+    NET.fails=0;NET.lastOk=Date.now();NET.rateLimited=false;NET.backoffUntil=0;
+    updateNetUI();enrichApproaches();
+    scheduleNext(REFRESH_MS);
+  }catch(e){
+    NET.fails++;
+    NET.rateLimited=!!(e&&e.status===429);
+    let base=REFRESH_MS*Math.pow(2,Math.min(NET.fails,5));   // 16s,32s,64s,128s,256s → capped
+    if(NET.rateLimited)base=Math.max(base,RATE_FLOOR_MS);
+    const delay=Math.round(Math.min(base,POLL_MAX)*(0.85+Math.random()*0.3));   // ±15% jitter
+    NET.backoffUntil=Date.now()+delay;
+    updateNetUI();
+    scheduleNext(delay);
+  }finally{NET.polling=false;}
+}
 async function fetchForView(){
   if(!S.map)return;
+  if(Date.now()<NET.backoffUntil)return;                     // don't pile on while backing off
   const c=S.map.getCenter();
   if(S.panLat!=null&&hav(c.lat,c.lng,S.panLat,S.panLon)/1.852<MIN_REFETCH_NM)return;
   S.panLat=c.lat;S.panLon=c.lng;
@@ -949,8 +1279,8 @@ async function fetchForView(){
   try{
     const pl=await fetchJSON(`${API}/v2/point/${c.lat}/${c.lng}/${radiusNm}`);
     mergeAircraft(pl?.ac||pl?.aircraft||[],false);
-    renderPlaneLayer();renderStats();renderEmergency();
-    el('trafficCount').textContent=`${S.allAC.size} ACFT`;updateMapStatus();
+    renderPlaneLayer();renderStats();renderEmergency();renderDisruptions();
+    updateMapStatus();updateNetUI();
   }catch(_){}
 }
 
@@ -1055,7 +1385,7 @@ function wireUI(){
   el('themeBtn').onclick=()=>{S.theme=S.theme==='auto'?'dark':S.theme==='dark'?'light':'auto';applyTheme();saveSettings();};
   el('followBtn').onclick=()=>{S.follow=!S.follow;el('followBtn').classList.toggle('on',S.follow);el('followBtn').textContent=S.follow?'FOLLOW · ON':'FOLLOW · OFF';saveSettings();if(S.follow){const t=(S.selectedKey&&S.allAC.get(S.selectedKey))||S.nearbyFiltered[0];if(t&&t.lat!=null)S.map.panTo([t.lat,t.lon]);}};
   if(el('recenterBtn'))el('recenterBtn').onclick=()=>{if(S.user&&S.map)S.map.setView([S.user.lat,S.user.lon],Math.max(S.map.getZoom(),10),{animate:true});};
-  el('refreshBtn').onclick=()=>{setStatus('SYNC\u2026','warn');loadNearby().catch(()=>setStatus('SYNC FAILED','bad'));};
+  el('refreshBtn').onclick=()=>poll(true);
   // collapsibles
   document.querySelectorAll('[data-collapse]').forEach(h=>h.onclick=()=>{
     const card=h.closest('.card');card.classList.toggle('collapsed');
@@ -1069,11 +1399,8 @@ function locateUser(){
     S.user={lat:pos.coords.latitude,lon:pos.coords.longitude};
     setStatus('SYNC\u2026','warn');
     ensureMap();S.map.setView([S.user.lat,S.user.lon],10);
-    try{
-      await loadNearby();
-      if(!S.refreshTimer)S.refreshTimer=setInterval(()=>loadNearby().catch(()=>setStatus('SYNC FAILED','bad')),REFRESH_MS);
-      if(!S.countTimer)S.countTimer=setInterval(tickCountdown,1000);
-    }catch(e){setStatus('LOAD FAILED','bad');}
+    poll(true);
+    if(!S.countTimer)S.countTimer=setInterval(tickCountdown,1000);
   },()=>{
     setStatus('LOCATION DENIED','bad');
     el('nearestCard').innerHTML='<div class="empty">Location access denied. Enable location for this site, then use SYNC to retry.</div>';
