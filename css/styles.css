@@ -60,13 +60,21 @@ body{
 .body{flex:1;display:flex;min-height:0;}
 .side{width:374px;flex-shrink:0;min-height:0;overflow-y:auto;overflow-x:hidden;
   background:var(--bg);border-right:1px solid var(--line);
-  padding:11px;display:flex;flex-direction:column;gap:11px;-webkit-overflow-scrolling:touch;}
+  padding:11px 11px 18px;display:flex;flex-direction:column;gap:11px;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+/* CRITICAL: cards have overflow:hidden, which zeroes their flex auto-min-size.
+   Without this they shrink below their content (squished + no scrollbar).
+   Pinning flex-shrink:0 keeps each card at natural height so .side overflows
+   and scrolls as intended. */
+.side>*{flex:0 0 auto;}
 .mapwrap{flex:1;position:relative;min-width:0;background:var(--bg2);}
 #map{position:absolute;inset:0;height:100%;width:100%;background:var(--bg2);z-index:0;}
 
 /* sidebar scrollbar */
 .side::-webkit-scrollbar{width:9px}
 .side::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;border:2px solid var(--bg)}
+.side::-webkit-scrollbar-thumb:hover{background:var(--line2)}
 .side::-webkit-scrollbar-track{background:transparent}
 
 /* ── CARDS ───────────────────────────────────────────────────────────────── */
@@ -254,18 +262,33 @@ body{
 .leaflet-bar a:hover{background:var(--panel2)!important;}
 
 /* ── RESPONSIVE ──────────────────────────────────────────────────────────── */
+/* Stack on narrow viewports: map fixed-height on top, sidebar flows below and
+   the whole page scrolls. The sidebar drops its own scroll container here so it
+   grows to its natural height instead of nesting two scroll regions. */
 @media(max-width:900px){
-  body{overflow:auto;}
-  .body{flex-direction:column;}
-  .mapwrap{order:1;height:56vh;flex:none;}
-  .side{order:2;width:100%;border-right:none;border-top:1px solid var(--line);overflow:visible;}
-  .map-ctl{width:210px;}
+  body{overflow:auto;height:auto;min-height:100dvh;}
+  .body{flex-direction:column;min-height:0;}
+  .mapwrap{order:1;height:54vh;min-height:340px;flex:none;}
+  .side{order:2;width:100%;border-right:none;border-top:1px solid var(--line);
+    overflow:visible;min-height:0;padding:12px 12px 22px;}
+  .map-ctl{width:min(230px,calc(100% - 20px));}
 }
-@media(max-width:480px){
+@media(max-width:560px){
   .topbar{padding:7px 11px;gap:8px;}
   .nav-sub,.nav-mode{display:none;}
-  .stat-grid{grid-template-columns:repeat(3,1fr);}
+  .nav-r{gap:5px;}
+  .mapwrap{height:46vh;min-height:300px;}
+  .stat-grid{grid-template-columns:repeat(5,1fr);}
+  /* bigger tap targets on the primary-target list */
+  .nb-btn{padding:9px 11px;}
+}
+@media(max-width:430px){
+  .reg-big{font-size:23px;}
+  .stat-grid{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .stat-tile .n{font-size:16px;}
   .map-legend{max-width:calc(100% - 20px);}
+  .nc-body{grid-template-columns:64px 1fr;gap:10px;}
+  .ac-photo{width:64px;height:50px;}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
 
