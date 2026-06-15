@@ -339,3 +339,9 @@ input[type=range]{height:3px;border-radius:999px;}
 .map-recenter:hover{border-color:var(--line2);color:var(--A);}
 
 @media(max-width:900px){.map-recenter{bottom:86px;}}
+
+/* ── v5 · PROCEDURES OVERLAY LABELS ──────────────────────────────────────── */
+.proc-lbl{background:color-mix(in srgb,var(--panel) 80%,transparent)!important;border:none!important;
+  color:#d99a3a!important;font-family:var(--mono)!important;font-size:8px!important;font-weight:700!important;
+  letter-spacing:.04em!important;padding:0 3px!important;box-shadow:none!important;white-space:nowrap;text-align:center;}
+.proc-lbl::before{display:none!important;}
