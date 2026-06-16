@@ -4,14 +4,22 @@
    amber/cyan/green semantics. Theme via :root[data-theme].
    ========================================================================== */
 :root{
-  --bg:#0a0f1a;--bg2:#0e1422;
-  --panel:#0e1422;--panel2:#11192a;--panel3:#0a0f1a;
-  --line:#22304a;--line2:#33445f;
-  --tx:#d6e0f0;--mu:#5f718f;--mu2:#8195b4;
-  --A:#f0a830;--G:#27c07a;--C:#2eb6f0;--R:#ef4b4b;--O:#e88030;
-  --r:8px;--r2:6px;
+  --bg:#070a13;--bg2:#0a0f1c;
+  --panel:#0c1120;--panel2:#111a2e;--panel3:#090d18;
+  --line:#1e2b45;--line2:#33455f;
+  --tx:#dde6f4;--mu:#61728f;--mu2:#8698b7;
+  --A:#f6ad3e;--G:#27c07a;--C:#2eb6f0;--R:#ef4b4b;--O:#e88030;
+  --r:9px;--r2:6px;
+  /* night-ops additions */
+  --strip:#101a2e;
+  --amber-soft:rgba(246,173,62,.10);--amber-line:rgba(246,173,62,.48);
+  --bevel:inset 0 1px 0 rgba(255,255,255,.035);
+  --elev:0 6px 22px rgba(0,0,0,.38);
+  --inset:inset 0 1px 2px rgba(0,0,0,.4);
   --font:'Outfit',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
+  /* phase accents */
+  --ph-app:#f6ad3e;--ph-dep:#2eb6f0;--ph-des:#7ea6d8;--ph-crz:#8698b7;--ph-enr:#61728f;--ph-gnd:#8893a6;
   /* category accents */
   --ch:#8ba0bd;--ca:#8ba0bd;--cb:#8ba0bd;--cg:#8ba0bd;--cr:#8ba0bd;--cm:#c98f8f;--cgr:#8ba0bd;--cx:#8ba0bd;
 }
@@ -20,6 +28,9 @@
   --panel:#ffffff;--panel2:#f3f6fb;--panel3:#e9eef6;
   --line:#d3dceb;--line2:#bac8de;
   --tx:#10203a;--mu:#64748b;--mu2:#5b6b86;
+  --strip:#fdf6ea;--amber-soft:rgba(214,138,30,.12);--amber-line:rgba(214,138,30,.45);
+  --bevel:inset 0 1px 0 rgba(255,255,255,.6);--elev:0 6px 20px rgba(20,40,80,.12);--inset:inset 0 1px 2px rgba(20,40,80,.08);
+  --ph-des:#3f6dac;--ph-crz:#5b6b86;--ph-enr:#64748b;--ph-gnd:#5b6b86;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -410,3 +421,111 @@ input[type=range]{height:3px;border-radius:999px;}
 .wx-note{font-family:var(--mono);font-size:9px;color:var(--A);margin-top:5px;line-height:1.4;}
 .wx-raw{font-family:var(--mono);font-size:9px;color:var(--mu);margin-top:6px;padding-top:6px;
   border-top:1px solid var(--line);word-break:break-word;line-height:1.5;}
+
+/* ============================================================================
+   v8 · REDESIGN — night-ops instrument panel + ATC flight strip
+   Signature: the primary target rendered as a flight-progress strip with a
+   notched amber edge. Everything else stays quiet: recessed readouts, hairline
+   panels, phase-coloured badges so the sidebar and the map speak one language.
+   ========================================================================== */
+
+/* instrument-panel cards: faint top bevel + soft elevation, calmer borders */
+.card{box-shadow:var(--bevel),var(--elev);}
+.cp{padding:14px;}
+.ph-t{color:var(--mu2);}
+
+/* ── SIGNATURE · PRIMARY TARGET FLIGHT STRIP ─────────────────────────────── */
+.card.strip{
+  position:relative;padding:14px 14px 14px 18px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--strip) 92%,var(--A)) 0%,var(--panel) 14%);
+  border-color:var(--line2);overflow:visible;
+}
+/* the holder edge: a solid amber rail with two punch-clips, like a real strip */
+.card.strip::before{
+  content:'';position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:4px;
+  background:var(--A);box-shadow:0 0 10px var(--amber-soft);
+}
+.card.strip::after{
+  content:'';position:absolute;left:1px;top:50%;width:2px;height:18px;transform:translateY(-50%);
+  background:var(--panel);border-top:3px solid var(--strip);border-bottom:3px solid var(--strip);
+}
+.card.strip .phead{margin-bottom:12px;}
+#primaryEyebrow{color:var(--A);letter-spacing:.16em;}
+#selPill{box-shadow:var(--inset);}
+
+/* header block: image left, identity right */
+.pt-head{display:grid;grid-template-columns:88px 1fr;gap:13px;align-items:start;}
+.pt-head .ac-photo{width:88px;height:64px;border-radius:7px;box-shadow:var(--inset);}
+.pt-id{min-width:0;}
+.reg-big{font-family:var(--mono);font-size:30px;font-weight:700;line-height:.95;letter-spacing:-.02em;
+  color:var(--tx);text-shadow:0 0 18px rgba(246,173,62,.06);}
+.pt-meta{font-family:var(--mono);font-size:10px;color:var(--mu2);letter-spacing:.04em;margin-top:5px;
+  min-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card.strip .tag-row{margin-top:9px;}
+
+/* recessed metric readouts */
+.smini{gap:6px;margin-top:12px;}
+.sm{background:var(--panel3);border-color:var(--line);box-shadow:var(--inset);padding:6px 8px;}
+.sm .k{color:var(--mu);}
+.sm .v{font-size:13px;font-weight:700;}
+.sm .v.live{color:var(--A);}
+
+/* ── NEAREST QUICK-STRIP (mini flight strip) ─────────────────────────────── */
+.nearbar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;cursor:pointer;
+  padding:8px 12px 8px 14px;position:relative;text-align:left;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--bevel);transition:border-color .12s,transform .12s;
+}
+.nearbar::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:3px;background:var(--mu2);}
+.nearbar:hover{border-color:var(--line2);transform:translateX(1px);}
+.nbar-l{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap;}
+.nbar-tag{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.12em;color:var(--mu);
+  border:1px solid var(--line2);border-radius:3px;padding:1px 5px;}
+.nbar-reg{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--tx);letter-spacing:-.01em;}
+.nbar-cs{font-family:var(--mono);font-size:10px;color:var(--mu2);}
+.nbar-r{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--mu2);flex-shrink:0;white-space:nowrap;}
+
+/* ── PHASE BADGES · colour-coded so map + readout agree ──────────────────── */
+.phase{background:var(--panel3);border-color:var(--line2);box-shadow:var(--inset);}
+.ph-app{color:var(--ph-app);border-color:var(--amber-line);background:var(--amber-soft);}
+.ph-dep{color:var(--ph-dep);border-color:rgba(46,182,240,.4);background:rgba(46,182,240,.07);}
+.ph-des{color:var(--ph-des);border-color:rgba(126,166,216,.32);}
+.ph-crz{color:var(--ph-crz);}
+.ph-enr{color:var(--ph-enr);}
+.ph-gnd{color:var(--ph-gnd);}
+
+/* ── LIST ROWS · tidy strips ─────────────────────────────────────────────── */
+.nb-btn{background:var(--panel);box-shadow:var(--bevel);padding:8px 11px;}
+.nb-btn:hover{transform:translateX(1px);}
+.nb-btn.active{background:var(--amber-soft);box-shadow:var(--bevel),0 0 0 1px var(--amber-line);}
+.nb-reg{font-size:13px;}
+.dis-btn .nb-reg{font-size:12px;}
+
+/* ── TOP BAR · cleaner lockup ────────────────────────────────────────────── */
+.topbar{background:linear-gradient(180deg,var(--panel) 0%,color-mix(in srgb,var(--panel) 88%,var(--bg)) 100%);}
+.logo-mark{box-shadow:var(--bevel),0 2px 8px rgba(0,0,0,.3);background:var(--strip);border-color:var(--amber-line);}
+.nav-mode{color:var(--A);border-color:var(--amber-line);background:var(--amber-soft);}
+.nbtn{box-shadow:var(--bevel);}
+.nbtn.on{background:var(--amber-soft);border-color:var(--amber-line);box-shadow:var(--bevel),0 0 0 1px var(--amber-soft);}
+.sp{box-shadow:var(--bevel);}
+
+/* ── FLOATING MAP PANELS · matched instrument glass ──────────────────────── */
+.map-badge,.map-ctl,.map-legend,.map-status,.map-recenter{box-shadow:var(--bevel),var(--elev);}
+.map-ctl{border-radius:var(--r);}
+.stat-tile{box-shadow:var(--inset);background:var(--panel3);}
+.stat-tile .n{font-size:19px;}
+
+/* ── SCOPE TEXTURE · faint scanlines over the map (static, subtle) ────────── */
+.mapwrap::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,0,0,.05) 3px 4px);}
+:root[data-theme="light"] .mapwrap::before{background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(20,40,80,.025) 3px 4px);}
+
+/* keep the old nearest-card accent rule from re-applying to anything */
+.nearest{border-left:none;}
+
+@media(max-width:430px){
+  .pt-head{grid-template-columns:74px 1fr;gap:11px;}
+  .pt-head .ac-photo{width:74px;height:55px;}
+  .reg-big{font-size:26px;}
+}
