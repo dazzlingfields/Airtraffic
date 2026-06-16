@@ -60,19 +60,17 @@
   <!-- SIDEBAR -->
   <aside class="side">
 
-    <!-- PRIMARY TARGET (nearest) -->
-    <div class="card nearest" id="nearestCard">
-      <div class="empty">Waiting for location permission&hellip;</div>
-    </div>
+    <!-- NEAREST quick-strip — appears when you inspect a different aircraft -->
+    <button class="nearbar" id="nearBar" type="button" style="display:none"></button>
 
-    <!-- SELECTED AIRCRAFT -->
-    <div class="card cp">
+    <!-- PRIMARY TARGET · flight strip (shows the selected aircraft; defaults to nearest) -->
+    <div class="card strip" id="primaryCard">
       <div class="phead">
-        <span class="ph-t">SELECTED</span>
+        <span class="ph-t" id="primaryEyebrow">PRIMARY TARGET</span>
         <span id="selPill">NONE</span>
       </div>
-      <div id="selCard">
-        <div class="empty">Tap any aircraft on the map or in the list to inspect.</div>
+      <div id="primaryBody">
+        <div class="empty">Waiting for location permission&hellip;</div>
       </div>
     </div>
 
