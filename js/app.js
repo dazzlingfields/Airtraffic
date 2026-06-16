@@ -50,6 +50,8 @@ const S={
 };
 /* network health for the resilient poll loop */
 const NET={fails:0,lastOk:0,nextAt:0,backoffUntil:0,rateLimited:false,polling:false};
+/* bumped on every data merge to invalidate the per-poll flight-phase cache */
+let PHASE_EPOCH=0;
 
 /* ── FILTERS ─────────────────────────────────────────────────────────────── */
 const F={q:'',cats:new Set(AC.CHIPS),altMin:0,altMax:45000,
@@ -178,13 +180,28 @@ function rwyForApt(apt,trk){            // prefer the real runway end aligned wi
   }
   return rwyFromTrack(trk);
 }
-/* Returns {phase,label,cls,apt,distNm,runway,fromDir,vs,toward}.
-   cls ∈ app|dep|gnd|des|crz|enr — drives badge colour. */
-function flightPhase(item){
+/* Vertical speed, smoothed: trust the ADS-B baro/geom rate when present, else
+   derive a trend from the altitude trail so a single bad sample can't flip the
+   phase. Returns fpm or null. */
+function smoothVs(item,rawVs){
+  if(rawVs!=null)return rawVs;
+  const pts=S.histories.get(item.key);
+  if(pts&&pts.length>=2){
+    const a=pts[pts.length-1],b=pts[Math.max(0,pts.length-4)];
+    const dtMin=(a.ts-b.ts)/60000;
+    if(dtMin>0.05&&a.alt!=null&&b.alt!=null)return(a.alt-b.alt)/dtMin;
+  }
+  return null;
+}
+/* Raw phase from the current sample. Approach/departure gates now use height
+   ABOVE FIELD (alt − field elevation) instead of MSL, which fixes mis-calls at
+   high-elevation airports. Returns {phase,label,cls,apt,distNm,runway,fromDir,vs,toward}.
+   cls ∈ app|dep|gnd|des|crz|enr drives badge colour. */
+function computePhase(item){
   const raw=item.raw||{};
   const lat=pickN(raw.lat,raw.latitude,item.lat),lon=pickN(raw.lon,raw.longitude,item.lon);
   const alt=altNumeric(raw);
-  const vs=pickN(raw.baro_rate,raw.geom_rate,raw.vertical_rate);
+  const vs=smoothVs(item,pickN(raw.baro_rate,raw.geom_rate,raw.vertical_rate));
   const trk=pickN(raw.track,raw.mag_heading,raw.true_heading);
   const gnd=raw.on_ground===true||raw.gnd===true||String(raw.alt_baro||'').toLowerCase()==='ground'||alt===0;
   const na=(lat!=null&&lon!=null)?nearestAirport(lat,lon):null;
@@ -192,26 +209,53 @@ function flightPhase(item){
   if(AC.isVehicle(raw)){out.phase='SURFACE';out.cls='gnd';out.label=na&&na.distNm<4?`At ${na.apt.ia}`:'';return out;}
   if(!na){out.phase=(alt!=null&&alt>20000)?'CRUISE':'EN ROUTE';out.cls=alt!=null&&alt>20000?'crz':'enr';return out;}
   const d=na.distNm;
+  const fieldEl=na.apt.el!=null?na.apt.el:0;
+  const agl=alt!=null?Math.max(0,alt-fieldEl):null;        // height above the field, ft
   const brgAptToAc=bearing(na.apt.lat,na.apt.lon,lat,lon);  // where the aircraft sits, from field
   const brgAcToApt=bearing(lat,lon,na.apt.lat,na.apt.lon);  // heading that points at the field
-  const toward=trk!=null&&angDiff(trk,brgAcToApt)<55;
-  const away  =trk!=null&&angDiff(trk,brgAcToApt)>125;
+  const toward=trk!=null&&angDiff(trk,brgAcToApt)<50;
+  const away  =trk!=null&&angDiff(trk,brgAcToApt)>130;
   out.fromDir=compass(brgAptToAc);out.toward=toward;
+  const CLIMB=300,SINK=-250;                                // vertical-speed deadband, fpm
   if(gnd){out.phase='ON GROUND';out.cls='gnd';out.label=d<4?na.apt.ia:'';return out;}
-  if(vs!=null&&vs>400&&alt<13000&&d<35&&away){
+  if(vs!=null&&vs>CLIMB&&agl!=null&&agl<13000&&d<35&&away){
     out.phase='DEPARTURE';out.cls='dep';out.label=`climb-out · ${na.apt.ia}`;out.runway=rwyForApt(na.apt,trk);return out;
   }
-  if(vs!=null&&vs<-250&&d<40&&alt!=null&&alt<13000&&toward){
-    if(alt<2500&&d<8)out.phase='FINAL APPROACH';
-    else if(alt<6000&&d<18)out.phase='APPROACH';
+  if(vs!=null&&vs<SINK&&d<40&&agl!=null&&agl<13000&&toward){
+    if(agl<2500&&d<8)out.phase='FINAL APPROACH';
+    else if(agl<6000&&d<18)out.phase='APPROACH';
     else out.phase='ARRIVAL';
     out.cls='app';out.label=na.apt.ia;out.runway=rwyForApt(na.apt,trk);return out;
   }
   if(vs!=null&&vs<-300&&alt!=null&&alt>12000){out.phase='DESCENT';out.cls='des';return out;}
-  if(vs!=null&&vs>400&&alt!=null&&alt<18000){out.phase='CLIMB';out.cls='dep';return out;}
+  if(vs!=null&&vs>CLIMB&&alt!=null&&alt<18000){out.phase='CLIMB';out.cls='dep';return out;}
   if(alt!=null&&alt>=20000){out.phase='CRUISE';out.cls='crz';return out;}
   if(d<25){out.phase='OVERFLIGHT';out.cls='enr';out.label=`near ${na.apt.ia}`;return out;}
   out.phase='EN ROUTE';out.cls='enr';return out;
+}
+/* Memoized + damped phase. The result is cached per poll (PHASE_EPOCH bumps on
+   every data merge) so the O(airports) nearest-airport scan runs once per
+   aircraft per frame instead of once per consumer. Transitions into or out of
+   the approach/departure classes must persist PHASE_DWELL polls before they are
+   accepted, which stops boundary flicker from strobing the badge and the
+   diversion flag. Phase carry-over lives on the item (see mergeAircraft). */
+const PHASE_DWELL=2;
+function flightPhase(item){
+  if(item._phStamp===PHASE_EPOCH&&item._ph)return item._ph;
+  const raw=computePhase(item);
+  const prev=item._ph;
+  let acc=raw;
+  if(prev){
+    const guarded=(raw.cls==='app'||raw.cls==='dep'||prev.cls==='app'||prev.cls==='dep');
+    if(raw.cls!==prev.cls&&guarded){
+      if(item._phCand===raw.phase)item._phCandN=(item._phCandN||0)+1;
+      else{item._phCand=raw.phase;item._phCandN=1;}
+      if(item._phCandN<PHASE_DWELL)acc=Object.assign({},prev,{vs:raw.vs,distNm:raw.distNm!=null?raw.distNm:prev.distNm});
+      else{acc=raw;item._phCand=null;item._phCandN=0;}
+    }else{acc=raw;item._phCand=null;item._phCandN=0;}
+  }
+  item._ph=acc;item._phStamp=PHASE_EPOCH;
+  return acc;
 }
 function phaseHtml(item){
   const p=flightPhase(item);
@@ -610,9 +654,11 @@ function mergeAircraft(aircraft,isUserQuery){
       reg:norm(ac.r||ac.reg),hex:norm(ac.hex),callsign:norm(ac.flight||ac.callsign),
       firstSeen:prev.firstSeen||now,raw:ac,live:ac,
       meta:prev.meta||null,route:prev.route||null,routeTried:prev.routeTried||false,
+      _ph:prev._ph||null,_phCand:prev._phCand||null,_phCandN:prev._phCandN||0,
     };
     S.allAC.set(key,item);addHist(item);
   }
+  PHASE_EPOCH++;                                  // new data: recompute phases this frame
   if(isUserQuery&&S.user){
     S.nearby=Array.from(S.allAC.values()).filter(i=>i.distKm<USER_RANGE*1.852).sort((a,b)=>a.distKm-b.distKm);
   }
@@ -1026,8 +1072,8 @@ function renderMap(){
   setTimeout(()=>S.map.invalidateSize(),80);
 }
 
-/* ── NEAREST PRIMARY TARGET ──────────────────────────────────────────────── */
-function makeNearestHtml(item){
+/* ── PRIMARY TARGET (flight strip · renders the selected aircraft) ────────── */
+function makePrimaryHtml(item){
   if(!item)return'<div class="empty">No returns match the current filters.</div>';
   const meta=item.meta||{},live=item.live||item.raw||{},route=item.route||null;
   const photo=meta.url_photo_thumbnail||meta.url_photo||'';
@@ -1035,83 +1081,88 @@ function makeNearestHtml(item){
   const cs=norm(live.flight||live.callsign||item.callsign);
   const type=meta.icao_type||meta.type||live.t||live.type||'';
   const owner=meta.registered_owner||'';
+  const hex=meta.mode_s||item.hex||'';
   const sq=sqInfo(live.squawk||item.raw?.squawk);
   const air=isAirborne(live);
   const{label,cls}=AC.acCategory(AC.classifyAC(live));
-  const dirTxt=item.bearing!=null?`${compass(item.bearing)} of you`:'';
-  return`<div class="nc-ey">PRIMARY TARGET &middot; NEAREST &middot; ${fmtDist(item.distNm)}${dirTxt?' &middot; '+dirTxt:''}</div>
-<div class="phase-row">${phaseHtml(item)}</div>
-<div class="nc-body">
-  <div class="ac-photo">${photo?`<img src="${photo}" alt="">`:'NO PHOTO'}</div>
-  <div class="nc-main">
-    <div class="reg-big">${reg}</div>
-    <div class="tag-row">
-      <span class="cat ${cls}">${label}</span>
-      ${cs?`<span class="tag cyn">${cs}</span>`:''}
-      ${type?`<span class="tag">${type}</span>`:''}
-      ${sq?`<span class="tag ${sq.alert?'red':'amb'}">${sq.code}${sq.label?` &middot; ${sq.label}`:''}</span>`:''}
-      ${owner?`<span class="tag">${owner}</span>`:''}
-    </div>
-    <div class="smini">
-      <div class="sm"><div class="k">ALT</div><div class="v ${air?'live':''}">${fmtAlt(live)}</div></div>
-      <div class="sm"><div class="k">G/S</div><div class="v">${fmtSpd(live)}</div></div>
-      <div class="sm"><div class="k">TRK</div><div class="v">${fmtTrack(live)}</div></div>
-      <div class="sm"><div class="k">V/S</div><div class="v">${fmtClimb(live)}</div></div>
-      <div class="sm"><div class="k">BRG</div><div class="v">${item.bearing!=null?Math.round(item.bearing)+'\u00b0 '+compass(item.bearing):'\u2014'}</div></div>
-      <div class="sm"><div class="k">UPDT</div><div class="v">${fmtAgo(live.seen??live.seen_pos)}</div></div>
-    </div>
-  </div>
-  <div class="route-col"><div class="rbox">
-    <div class="rbox-h">FLIGHT ROUTE</div>${routeHtml(route,live)}
-  </div></div>
-</div>`;
-}
-
-/* ── SELECTED CARD (compact) ─────────────────────────────────────────────── */
-function makeSelectedHtml(item){
-  if(!item)return'<div class="empty">Tap any aircraft on the map or in the traffic list to inspect.</div>';
-  const meta=item.meta||{},live=item.live||item.raw||{},route=item.route||null;
-  const photo=meta.url_photo_thumbnail||meta.url_photo||'';
-  const reg=meta.registration||item.reg||item.hex||'\u2014';
-  const cs=norm(live.flight||live.callsign||item.callsign);
-  const sq=sqInfo(live.squawk||item.raw?.squawk);
-  const air=isAirborne(live);
-  const hex=meta.mode_s||item.hex||'';
   const ph=flightPhase(item);
-  const type=meta.icao_type||meta.type||live.t||live.type||'\u2014';
+  const dist=item.distNm!=null?fmtDist(item.distNm):'';
+  const dir=item.bearing!=null?`${compass(item.bearing)} of you`:'';
   const metrics=[
-    ['ALT',fmtAlt(live),air?'live':''],
-    ['G/S',fmtSpd(live),''],
-    ['TRK',fmtTrack(live),''],
-    ['V/S',fmtClimb(live),''],
-    ['DIST',fmtDist(item.distNm),''],
-    ['BRG',item.bearing!=null?`${Math.round(item.bearing)}\u00b0 ${compass(item.bearing)}`:'\u2014',''],
+    ['ALT',fmtAlt(live),air?'live':''],['G/S',fmtSpd(live),''],['TRK',fmtTrack(live),''],
+    ['V/S',fmtClimb(live),''],['DIST',dist||'\u2014',''],['BRG',item.bearing!=null?`${Math.round(item.bearing)}\u00b0 ${compass(item.bearing)}`:'\u2014',''],
   ];
   const idents=[
-    ['TYPE',type,''],
+    type?['TYPE',type,'']:null,
     meta.manufacturer?['MFR',meta.manufacturer,'']:null,
-    meta.registered_owner?['OPERATOR',meta.registered_owner,'']:null,
-    hex?['ICAO',hex,'']:null,
+    owner?['OPERATOR',owner,'']:null,
+    hex?['MODE S',hex,'']:null,
     sq?['SQUAWK',`${sq.code}${sq.label?' \u00b7 '+sq.label:''}`,(sq.alert?'red':'')]:null,
-    ph.apt?['FIELD',`${ph.apt.ia} \u00b7 ${fmtDist(ph.distNm)}`,'']:null,
+    ph.apt?['FIELD',`${ph.apt.ia||ph.apt.ic} \u00b7 ${fmtDist(ph.distNm)}`,'']:null,
     (ph.runway&&(ph.cls==='app'||ph.cls==='dep'))?['RWY (est)',ph.runway,'']:null,
     ['POSITION',fmtCoords(pickN(live.lat,live.latitude),pickN(live.lon,live.longitude)),''],
     ['UPDATED',fmtAgo(live.seen??live.seen_pos),''],
   ].filter(Boolean);
   const links=hex?`<div class="ext-links">
     <a href="https://globe.adsbexchange.com/?icao=${hex.toLowerCase()}" target="_blank" rel="noopener">ADSB Exchange \u2197</a>
-    <a href="https://flightaware.com/live/flight/${encodeURIComponent(cs||reg)}" target="_blank" rel="noopener">FlightAware \u2197</a>
-  </div>`:'';
-  return`${photo?`<div class="sph"><img src="${photo}" alt=""></div>`:''}
-<div class="phase-row">${phaseHtml(item)}</div>
-<div class="smini">
-  ${metrics.map(([k,v,c])=>`<div class="sm"><div class="k">${k}</div><div class="v ${c||''}">${v||'\u2014'}</div></div>`).join('')}
-</div>
-<div class="idlist">
-  ${idents.map(([k,v,c])=>`<div class="idrow"><span class="idk">${k}</span><span class="idv ${c||''}">${v||'\u2014'}</span></div>`).join('')}
-</div>
-${route?`<div class="rbox" style="margin-top:10px"><div class="rbox-h">FLIGHT ROUTE</div>${routeHtml(route,live)}</div>`:''}
-${links}`;
+    <a href="https://flightaware.com/live/flight/${encodeURIComponent(cs||reg)}" target="_blank" rel="noopener">FlightAware \u2197</a></div>`:'';
+  return`<div class="pt-head">
+    <div class="ac-photo">${photo?`<img src="${photo}" alt="">`:'NO IMAGE'}</div>
+    <div class="pt-id">
+      <div class="reg-big">${reg}</div>
+      <div class="pt-meta">${[dist,dir].filter(Boolean).join(' \u00b7 ')||'\u00a0'}</div>
+      <div class="tag-row">
+        <span class="cat ${cls}">${label}</span>
+        ${cs?`<span class="tag cyn">${cs}</span>`:''}
+        ${sq?`<span class="tag ${sq.alert?'red':'amb'}">${sq.code}${sq.label?` \u00b7 ${sq.label}`:''}</span>`:''}
+      </div>
+    </div>
+  </div>
+  <div class="phase-row">${phaseHtml(item)}</div>
+  <div class="smini">
+    ${metrics.map(([k,v,c])=>`<div class="sm"><div class="k">${k}</div><div class="v ${c||''}">${v||'\u2014'}</div></div>`).join('')}
+  </div>
+  <div class="idlist">
+    ${idents.map(([k,v,c])=>`<div class="idrow"><span class="idk">${k}</span><span class="idv ${c||''}">${v||'\u2014'}</span></div>`).join('')}
+  </div>
+  ${route?`<div class="rbox" style="margin-top:10px"><div class="rbox-h">FLIGHT ROUTE</div>${routeHtml(route,live)}</div>`:''}
+  ${links}`;
+}
+
+/* ── NEAREST QUICK-STRIP ─────────────────────────────────────────────────────
+   When the primary card is showing something you clicked, the nearest aircraft
+   collapses to this slim strip so it stays one tap away. */
+function makeNearBar(item){
+  if(!item)return'';
+  const ph=flightPhase(item);
+  const cs=norm(item.raw?.flight||item.callsign);
+  return`<span class="nbar-l">
+      <span class="nbar-tag">NEAREST</span>
+      <span class="nbar-reg">${item.reg||item.hex||'Aircraft'}</span>
+      ${cs?`<span class="nbar-cs">${cs}</span>`:''}
+      <span class="phase ph-${ph.cls}">${ph.phase}</span>
+    </span>
+    <span class="nbar-r">${fmtDist(item.distNm)}${item.bearing!=null?' \u00b7 '+compass(item.bearing):''}&nbsp;\u203a</span>`;
+}
+/* The primary card always renders the SELECTED aircraft, which defaults to the
+   nearest on open. Selecting a different aircraft promotes it here and drops the
+   nearest into the quick-strip. */
+function renderPrimary(){
+  const nearest=S.nearbyFiltered[0]||null;
+  const nearestKey=nearest?nearest.key:null;
+  if(!S.selectedKey||!S.allAC.has(S.selectedKey))S.selectedKey=nearestKey;
+  S.selectedInfo=S.selectedKey?S.allAC.get(S.selectedKey)||null:null;
+  const sel=S.selectedInfo;
+  const isNear=!!(sel&&nearestKey&&sel.key===nearestKey);
+  el('primaryBody').innerHTML=sel?makePrimaryHtml(sel):'<div class="empty">No active returns match the current filters.</div>';
+  setTxt('primaryEyebrow',isNear?'PRIMARY \u00b7 NEAREST':'PRIMARY \u00b7 SELECTED');
+  setTxt('selPill',sel?(sel.reg||sel.hex||'AIRCRAFT'):'NONE');
+  const bar=el('nearBar');
+  if(bar){
+    if(nearest&&nearestKey!==S.selectedKey){
+      bar.style.display='flex';bar.innerHTML=makeNearBar(nearest);bar.onclick=()=>selectAircraft(nearestKey);
+    }else bar.style.display='none';
+  }
 }
 
 /* ── NEARBY LIST ─────────────────────────────────────────────────────────── */
@@ -1212,11 +1263,7 @@ function renderEmergency(){
 /* ── RENDER ALL ──────────────────────────────────────────────────────────── */
 function renderAll(){
   S.nearbyFiltered=S.nearby.filter(passesFilter);
-  if(!S.selectedKey||!S.allAC.has(S.selectedKey))S.selectedKey=S.nearbyFiltered[0]?.key||null;
-  S.selectedInfo=S.selectedKey?S.allAC.get(S.selectedKey)||null:null;
-  el('nearestCard').innerHTML=S.nearbyFiltered.length?makeNearestHtml(S.nearbyFiltered[0]):'<div class="empty">No active returns match the current filters.</div>';
-  el('selCard').innerHTML=makeSelectedHtml(S.selectedInfo);
-  el('selPill').textContent=S.selectedInfo?(S.selectedInfo.reg||S.selectedInfo.hex||'AIRCRAFT'):'NONE';
+  renderPrimary();
   renderNearbyList();renderStats();renderEmergency();renderDisruptions();renderPlaneLayer();
   if(S.overlays.trails)renderMap();
 }
@@ -1288,9 +1335,8 @@ async function fetchForView(){
 async function selectAircraft(key){
   const item=S.allAC.get(key);if(!item)return;
   S.selectedKey=key;S.selectedInfo=item;
-  el('selCard').innerHTML=makeSelectedHtml(item);
-  el('selPill').textContent=item.reg||item.hex||'AIRCRAFT';
-  try{el('selCard').closest('.card').scrollIntoView({block:'nearest',behavior:'smooth'});}catch(_){}
+  renderPrimary();
+  try{el('primaryCard').scrollIntoView({block:'nearest',behavior:'smooth'});}catch(_){}
   renderNearbyList();renderPlaneLayer();
   if(S.map)renderMap();
   if(S.map&&item.lat!=null)S.map.panTo([item.lat,item.lon],{animate:true});
@@ -1299,8 +1345,7 @@ async function selectAircraft(key){
     if(S.selectedKey!==key)return;
     if(meta)item.meta=meta;if(route)item.route=route;item.live=item.raw;
     S.selectedInfo=item;S.allAC.set(key,item);
-    if(S.nearbyFiltered[0]?.key===key)el('nearestCard').innerHTML=makeNearestHtml(item);
-    el('selCard').innerHTML=makeSelectedHtml(item);renderNearbyList();renderPlaneLayer();
+    renderPrimary();renderNearbyList();renderPlaneLayer();
   }catch(_){}
 }
 window.__sel=selectAircraft;
@@ -1394,7 +1439,7 @@ function wireUI(){
 
 /* ── GEOLOCATION ─────────────────────────────────────────────────────────── */
 function locateUser(){
-  if(!navigator.geolocation){setStatus('GEO UNAVAILABLE','bad');el('nearestCard').innerHTML='<div class="empty">Geolocation isn\u2019t supported by this browser.</div>';return;}
+  if(!navigator.geolocation){setStatus('GEO UNAVAILABLE','bad');el('primaryBody').innerHTML='<div class="empty">Geolocation isn\u2019t supported by this browser.</div>';return;}
   navigator.geolocation.getCurrentPosition(async pos=>{
     S.user={lat:pos.coords.latitude,lon:pos.coords.longitude};
     setStatus('SYNC\u2026','warn');
@@ -1403,7 +1448,7 @@ function locateUser(){
     if(!S.countTimer)S.countTimer=setInterval(tickCountdown,1000);
   },()=>{
     setStatus('LOCATION DENIED','bad');
-    el('nearestCard').innerHTML='<div class="empty">Location access denied. Enable location for this site, then use SYNC to retry.</div>';
+    el('primaryBody').innerHTML='<div class="empty">Location access denied. Enable location for this site, then use SYNC to retry.</div>';
     ensureMap();
   },{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
