@@ -8,18 +8,18 @@
   --panel:#0c1120;--panel2:#111a2e;--panel3:#090d18;
   --line:#1e2b45;--line2:#33455f;
   --tx:#dde6f4;--mu:#61728f;--mu2:#8698b7;
-  --A:#f6ad3e;--G:#27c07a;--C:#2eb6f0;--R:#ef4b4b;--O:#e88030;
+  --A:#ffb14a;--G:#27c07a;--C:#2eb6f0;--R:#ef4b4b;--O:#e88030;
   --r:9px;--r2:6px;
   /* night-ops additions */
   --strip:#101a2e;
-  --amber-soft:rgba(246,173,62,.10);--amber-line:rgba(246,173,62,.48);
+  --amber-soft:rgba(255,177,74,.11);--amber-line:rgba(255,177,74,.5);
   --bevel:inset 0 1px 0 rgba(255,255,255,.035);
   --elev:0 6px 22px rgba(0,0,0,.38);
   --inset:inset 0 1px 2px rgba(0,0,0,.4);
   --font:'Outfit',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
   /* phase accents */
-  --ph-app:#f6ad3e;--ph-dep:#2eb6f0;--ph-des:#7ea6d8;--ph-crz:#8698b7;--ph-enr:#61728f;--ph-gnd:#8893a6;
+  --ph-app:#ffb14a;--ph-dep:#2eb6f0;--ph-des:#7ea6d8;--ph-crz:#8698b7;--ph-enr:#61728f;--ph-gnd:#8893a6;
   /* category accents */
   --ch:#8ba0bd;--ca:#8ba0bd;--cb:#8ba0bd;--cg:#8ba0bd;--cr:#8ba0bd;--cm:#c98f8f;--cgr:#8ba0bd;--cx:#8ba0bd;
 }
@@ -529,3 +529,119 @@ input[type=range]{height:3px;border-radius:999px;}
   .pt-head .ac-photo{width:74px;height:55px;}
   .reg-big{font-size:26px;}
 }
+
+/* ============================================================================
+   v9 · SHELL OVERHAUL — full-bleed scope + floating glass instruments
+   The map is the centre: it fills the whole stage. The sidebar becomes a
+   frosted "command rail" floating over the scope (left dock on desktop,
+   peek/expand bottom sheet on mobile). Map tools float as glass clusters.
+   This section is authoritative for layout and overrides earlier rules.
+   ========================================================================== */
+
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background:var(--bg);}
+
+/* ── COMMAND BAR ─────────────────────────────────────────────────────────── */
+.appbar{flex-shrink:0;display:flex;align-items:center;gap:10px;position:relative;z-index:1000;
+  padding:8px 13px;background:color-mix(in srgb,var(--panel) 88%,transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(0,0,0,.25);}
+.appbar::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--amber-line),transparent);opacity:.5;}
+.hmb{flex-shrink:0;width:36px;height:30px;display:grid;align-content:center;gap:4px;justify-items:center;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:8px;cursor:pointer;box-shadow:var(--bevel);transition:.15s;}
+.hmb span{display:block;width:16px;height:2px;border-radius:2px;background:var(--mu2);transition:.18s;}
+.hmb:hover{border-color:var(--amber-line);}
+.hmb:hover span{background:var(--A);}
+.hmb:focus-visible{outline:2px solid var(--A);outline-offset:2px;}
+.appbar .nav-logo{flex-shrink:0;}
+.appbar-r{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+
+/* ── STAGE + FULL-BLEED MAP ──────────────────────────────────────────────── */
+.stage{flex:1;position:relative;min-height:0;overflow:hidden;}
+.mapwrap{position:absolute;inset:0;height:auto;min-height:0;flex:none;background:var(--bg2);}
+
+/* ── COMMAND RAIL (floating glass) ───────────────────────────────────────── */
+.rail{position:absolute;left:12px;top:12px;bottom:12px;width:min(386px,calc(100% - 24px));z-index:850;
+  display:flex;flex-direction:column;border-radius:16px;overflow:hidden;
+  background:color-mix(in srgb,var(--panel) 80%,transparent);
+  border:1px solid var(--line2);backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);
+  box-shadow:0 20px 56px rgba(0,0,0,.55),var(--bevel);
+  transition:transform .32s cubic-bezier(.4,0,.2,1);}
+.rail-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:13px;
+  display:flex;flex-direction:column;gap:11px;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:var(--line2) transparent;}
+.rail-scroll>*{flex:0 0 auto;}
+.rail-scroll::-webkit-scrollbar{width:8px}
+.rail-scroll::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px;border:2px solid transparent;background-clip:padding-box;}
+.rail-scroll::-webkit-scrollbar-track{background:transparent}
+/* cards sit on glass: drop the heavy drop-shadow, keep the bevel */
+.rail .card{box-shadow:var(--bevel);background:color-mix(in srgb,var(--panel) 92%,transparent);}
+.rail .card.strip{background:linear-gradient(180deg,color-mix(in srgb,var(--strip) 90%,var(--A)) 0%,color-mix(in srgb,var(--panel) 94%,transparent) 16%);}
+.rail.collapsed{transform:translateX(calc(-100% - 16px));}
+
+/* rail footer tools */
+.rail-tools{display:flex;gap:6px;flex-wrap:wrap;}
+.rail-tools .nbtn{flex:1 1 auto;text-align:center;min-width:96px;padding:8px 6px;}
+
+/* mobile sheet grab handle (hidden on desktop) */
+.sheet-handle{display:none;}
+
+/* desktop reopen tab when collapsed */
+.rail-tab{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:840;
+  width:24px;height:56px;display:none;place-items:center;cursor:pointer;
+  background:color-mix(in srgb,var(--panel) 86%,transparent);color:var(--A);
+  border:1px solid var(--line2);border-left:none;border-radius:0 10px 10px 0;
+  font-family:var(--mono);font-size:16px;font-weight:700;line-height:1;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:var(--elev);}
+.rail-tab:hover{border-color:var(--amber-line);}
+.rail.collapsed ~ .rail-tab{display:grid;}
+
+/* ── FLOATING MAP CLUSTERS (reposition to clear the rail) ─────────────────── */
+.map-badge{left:50%;top:12px;right:auto;transform:translateX(-50%);z-index:820;border-radius:8px;}
+.map-ctl{top:12px;right:12px;z-index:830;border-radius:12px;}
+.map-legend{left:auto;right:12px;bottom:96px;top:auto;max-width:280px;z-index:820;border-radius:8px;}
+.map-recenter{right:12px;bottom:48px;z-index:825;border-radius:10px;}
+.map-status{z-index:820;}
+.map-fab{position:absolute;top:12px;right:12px;z-index:835;width:40px;height:40px;display:none;place-items:center;
+  color:var(--tx);background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line2);
+  border-radius:11px;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:var(--elev);transition:.15s;}
+.map-fab:hover{border-color:var(--amber-line);color:var(--A);}
+.map-fab.on{color:var(--A);border-color:var(--amber-line);background:var(--amber-soft);}
+
+/* focus visibility (quality floor) */
+.nbtn:focus-visible,.chip:focus-visible,.map-fab:focus-visible,.map-recenter:focus-visible,
+.nb-btn:focus-visible,.nearbar:focus-visible,.sheet-handle:focus-visible{outline:2px solid var(--A);outline-offset:2px;}
+
+/* ── TABLET / MOBILE: rail becomes a bottom sheet ────────────────────────── */
+@media(max-width:900px){
+  .mapwrap{position:absolute;inset:0;height:auto;min-height:0;}
+  .rail{left:0;right:0;bottom:0;top:auto;width:auto;height:88dvh;
+    border-radius:18px 18px 0 0;border-bottom:none;
+    transform:translateY(calc(100% - 152px));
+    box-shadow:0 -16px 48px rgba(0,0,0,.5),var(--bevel);}
+  .rail.sheet-open{transform:translateY(0);}
+  .rail.collapsed{transform:translateY(calc(100% - 152px));}
+  .sheet-handle{display:block;flex-shrink:0;width:100%;height:28px;border:none;background:transparent;cursor:pointer;position:relative;}
+  .sheet-handle::before{content:'';position:absolute;left:50%;top:11px;transform:translateX(-50%);
+    width:42px;height:4px;border-radius:3px;background:var(--line2);transition:background .15s;}
+  .sheet-handle:hover::before{background:var(--A);}
+  .rail-scroll{padding:4px 13px 22px;}
+  .rail-tab{display:none!important;}
+  .map-legend{display:none;}
+  .map-status{display:none;}
+  .map-fab{display:grid;}
+  .map-badge{top:9px;}
+  .map-recenter{top:60px;right:9px;bottom:auto;}
+  .map-ctl{display:none;top:108px;right:9px;left:9px;width:auto;max-width:none;max-height:58dvh;overflow:auto;}
+  .map-ctl.show{display:block;}
+}
+@media(max-width:560px){
+  .appbar{padding:7px 10px;gap:8px;}
+  .nav-sub,.nav-mode{display:none;}
+  .appbar-r{gap:5px;}
+  #updPill{display:none;}
+}
+
+/* honour reduced motion for the new transitions too */
+@media(prefers-reduced-motion:reduce){.rail,.hmb span{transition:none!important;}}
