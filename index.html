@@ -2,8 +2,8 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Overhead — live ADS-B flight tracking. A map-first radar console: nearest aircraft overhead, weather radar, layers, filters, airport approach &amp; departure detection.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="Overhead — live ADS-B flight radar. A map-first console: nearest aircraft overhead, weather radar, layers, filters, airport approach &amp; departure and diversion detection.">
 <meta name="color-scheme" content="dark light">
 <title>Overhead · Live Flight Radar</title>
 
@@ -24,8 +24,11 @@
 </head>
 <body>
 
-<!-- ── TOP BAR ───────────────────────────────────────────────────────────── -->
-<nav class="topbar">
+<!-- ── COMMAND BAR ───────────────────────────────────────────────────────── -->
+<header class="appbar">
+  <button class="hmb" id="railToggle" type="button" aria-label="Toggle panel" aria-expanded="true">
+    <span></span><span></span><span></span>
+  </button>
   <div class="nav-logo">
     <div class="logo-mark">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--A)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -34,14 +37,10 @@
     </div>
     Overhead
   </div>
-  <div class="nav-div"></div>
   <span class="nav-sub">ADS-B · LIVE TRAFFIC</span>
   <span class="nav-mode">RADAR</span>
 
-  <div class="nav-r">
-    <button class="nbtn" id="unitBtn" type="button">UNITS · IMPERIAL</button>
-    <button class="nbtn" id="themeBtn" type="button">THEME · AUTO</button>
-    <button class="nbtn" id="followBtn" type="button">FOLLOW · OFF</button>
+  <div class="appbar-r">
     <button class="nbtn" id="refreshBtn" type="button">SYNC</button>
     <div class="sp" id="updPill">SYNC —</div>
     <div class="sp" id="sPill">
@@ -49,105 +48,26 @@
       <span id="sText">LOCATING&hellip;</span>
     </div>
   </div>
-</nav>
+</header>
 
 <!-- ── EMERGENCY STRIP ───────────────────────────────────────────────────── -->
 <div class="emg" id="emgBanner" style="display:none"></div>
 
-<!-- ── BODY: SIDEBAR + MAP ───────────────────────────────────────────────── -->
-<div class="body">
+<!-- ── STAGE: full-bleed map + floating rail ─────────────────────────────── -->
+<div class="stage">
 
-  <!-- SIDEBAR -->
-  <aside class="side">
-
-    <!-- NEAREST quick-strip — appears when you inspect a different aircraft -->
-    <button class="nearbar" id="nearBar" type="button" style="display:none"></button>
-
-    <!-- PRIMARY TARGET · flight strip (shows the selected aircraft; defaults to nearest) -->
-    <div class="card strip" id="primaryCard">
-      <div class="phead">
-        <span class="ph-t" id="primaryEyebrow">PRIMARY TARGET</span>
-        <span id="selPill">NONE</span>
-      </div>
-      <div id="primaryBody">
-        <div class="empty">Waiting for location permission&hellip;</div>
-      </div>
-    </div>
-
-    <!-- DISRUPTIONS -->
-    <div class="card cp">
-      <div class="phead"><span class="ph-t">DISRUPTIONS</span><span id="disCount" class="dis-cnt">0</span></div>
-      <div id="disList"><div class="empty">No diversions, holds or emergencies detected.</div></div>
-    </div>
-
-    <!-- TRAFFIC IN RANGE -->
-    <div class="card cp">
-      <div class="phead"><span class="ph-t">TRAFFIC IN RANGE</span></div>
-      <div id="nbList"><div class="empty">No returns yet.</div></div>
-    </div>
-
-    <!-- FIELD STATS -->
-    <div class="card cp">
-      <div class="phead clk" data-collapse><span class="ph-t">FIELD STATS</span></div>
-      <div class="card-body">
-        <div class="stat-grid">
-          <div class="stat-tile"><div class="n" id="statTracked">0</div><div class="l">Tracked</div></div>
-          <div class="stat-tile"><div class="n" id="statShown">0</div><div class="l">Shown</div></div>
-          <div class="stat-tile"><div class="n" id="statNearby">0</div><div class="l">In Range</div></div>
-          <div class="stat-tile"><div class="n" id="statAir">0</div><div class="l">Airborne</div></div>
-          <div class="stat-tile"><div class="n" id="statEmerg">0</div><div class="l">Emerg</div></div>
-        </div>
-        <div class="bars" id="catBars" style="margin-bottom:11px"></div>
-        <div class="bars" id="altBars" style="margin-bottom:11px"></div>
-        <div class="sup">
-          <div class="sup-row"><span class="sk">Closest</span><span class="sv" id="supClosest">—</span></div>
-          <div class="sup-row"><span class="sk">Highest</span><span class="sv" id="supHighest">—</span></div>
-          <div class="sup-row"><span class="sk">Fastest</span><span class="sv" id="supFastest">—</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- FILTERS -->
-    <div class="card cp">
-      <div class="phead clk" data-collapse><span class="ph-t">FILTERS</span></div>
-      <div class="card-body">
-        <input class="f-search" id="fSearch" type="text" placeholder="Search reg / hex / callsign…" autocomplete="off" spellcheck="false">
-        <div class="chips">
-          <button class="chip on" data-chip="HEAVY" type="button">HEAVY</button>
-          <button class="chip on" data-chip="AIRLINE" type="button">AIRLINE</button>
-          <button class="chip on" data-chip="BIZJET" type="button">BIZJET</button>
-          <button class="chip on" data-chip="GA" type="button">GA</button>
-          <button class="chip on" data-chip="ROTOR" type="button">ROTOR</button>
-          <button class="chip on" data-chip="MILITARY" type="button">MIL</button>
-          <button class="chip on" data-chip="GROUND" type="button">GROUND</button>
-          <button class="chip on" data-chip="OTHER" type="button">OTHER</button>
-        </div>
-        <div class="f-altrow">
-          <div class="lab"><span>ALT FLOOR</span><b id="fAltMinV">0k</b></div>
-          <input id="fAltMin" type="range" min="0" max="45000" step="1000" value="0">
-        </div>
-        <div class="f-altrow">
-          <div class="lab"><span>ALT CEILING</span><b id="fAltMaxV">45k+</b></div>
-          <input id="fAltMax" type="range" min="0" max="45000" step="1000" value="45000">
-        </div>
-        <div class="f-tg">
-          <button class="nbtn" id="fAir" type="button">AIRBORNE</button>
-          <button class="nbtn" id="fMil" type="button">MILITARY</button>
-          <button class="nbtn" id="fEmg" type="button">EMERGENCY</button>
-        </div>
-        <button class="f-reset" id="fReset" type="button">RESET FILTERS</button>
-      </div>
-    </div>
-
-  </aside>
-
-  <!-- MAP -->
+  <!-- MAP (the centre) -->
   <div class="mapwrap">
     <div id="map"></div>
 
     <div class="map-badge">
       <span class="sd"></span><span id="trafficCount">SCANNING</span>
     </div>
+
+    <!-- layers toggle (mobile affordance) -->
+    <button class="map-fab" id="layersToggle" type="button" aria-label="Layers and overlays" title="Layers &amp; overlays">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </button>
 
     <div class="map-ctl">
       <div class="ctl-h">BASE MAP</div>
@@ -214,11 +134,136 @@
     </div>
   </div>
 
+  <!-- COMMAND RAIL (floating glass; bottom sheet on mobile) -->
+  <aside class="rail" id="rail">
+    <button class="sheet-handle" id="sheetHandle" type="button" aria-label="Expand or collapse panel"></button>
+    <div class="rail-scroll">
+
+      <!-- NEAREST quick-strip — appears when you inspect a different aircraft -->
+      <button class="nearbar" id="nearBar" type="button" style="display:none"></button>
+
+      <!-- PRIMARY TARGET · flight strip (selected aircraft; defaults to nearest) -->
+      <div class="card strip" id="primaryCard">
+        <div class="phead">
+          <span class="ph-t" id="primaryEyebrow">PRIMARY TARGET</span>
+          <span id="selPill">NONE</span>
+        </div>
+        <div id="primaryBody">
+          <div class="empty">Waiting for location permission&hellip;</div>
+        </div>
+      </div>
+
+      <!-- DISRUPTIONS -->
+      <div class="card cp">
+        <div class="phead"><span class="ph-t">DISRUPTIONS</span><span id="disCount" class="dis-cnt">0</span></div>
+        <div id="disList"><div class="empty">No diversions, holds or emergencies detected.</div></div>
+      </div>
+
+      <!-- TRAFFIC IN RANGE -->
+      <div class="card cp">
+        <div class="phead"><span class="ph-t">TRAFFIC IN RANGE</span></div>
+        <div id="nbList"><div class="empty">No returns yet.</div></div>
+      </div>
+
+      <!-- FIELD STATS -->
+      <div class="card cp">
+        <div class="phead clk" data-collapse><span class="ph-t">FIELD STATS</span></div>
+        <div class="card-body">
+          <div class="stat-grid">
+            <div class="stat-tile"><div class="n" id="statTracked">0</div><div class="l">Tracked</div></div>
+            <div class="stat-tile"><div class="n" id="statShown">0</div><div class="l">Shown</div></div>
+            <div class="stat-tile"><div class="n" id="statNearby">0</div><div class="l">In Range</div></div>
+            <div class="stat-tile"><div class="n" id="statAir">0</div><div class="l">Airborne</div></div>
+            <div class="stat-tile"><div class="n" id="statEmerg">0</div><div class="l">Emerg</div></div>
+          </div>
+          <div class="bars" id="catBars" style="margin-bottom:11px"></div>
+          <div class="bars" id="altBars" style="margin-bottom:11px"></div>
+          <div class="sup">
+            <div class="sup-row"><span class="sk">Closest</span><span class="sv" id="supClosest">—</span></div>
+            <div class="sup-row"><span class="sk">Highest</span><span class="sv" id="supHighest">—</span></div>
+            <div class="sup-row"><span class="sk">Fastest</span><span class="sv" id="supFastest">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTERS -->
+      <div class="card cp">
+        <div class="phead clk" data-collapse><span class="ph-t">FILTERS</span></div>
+        <div class="card-body">
+          <input class="f-search" id="fSearch" type="text" placeholder="Search reg / hex / callsign…" autocomplete="off" spellcheck="false">
+          <div class="chips">
+            <button class="chip on" data-chip="HEAVY" type="button">HEAVY</button>
+            <button class="chip on" data-chip="AIRLINE" type="button">AIRLINE</button>
+            <button class="chip on" data-chip="BIZJET" type="button">BIZJET</button>
+            <button class="chip on" data-chip="GA" type="button">GA</button>
+            <button class="chip on" data-chip="ROTOR" type="button">ROTOR</button>
+            <button class="chip on" data-chip="MILITARY" type="button">MIL</button>
+            <button class="chip on" data-chip="GROUND" type="button">GROUND</button>
+            <button class="chip on" data-chip="OTHER" type="button">OTHER</button>
+          </div>
+          <div class="f-altrow">
+            <div class="lab"><span>ALT FLOOR</span><b id="fAltMinV">0k</b></div>
+            <input id="fAltMin" type="range" min="0" max="45000" step="1000" value="0">
+          </div>
+          <div class="f-altrow">
+            <div class="lab"><span>ALT CEILING</span><b id="fAltMaxV">45k+</b></div>
+            <input id="fAltMax" type="range" min="0" max="45000" step="1000" value="45000">
+          </div>
+          <div class="f-tg">
+            <button class="nbtn" id="fAir" type="button">AIRBORNE</button>
+            <button class="nbtn" id="fMil" type="button">MILITARY</button>
+            <button class="nbtn" id="fEmg" type="button">EMERGENCY</button>
+          </div>
+          <button class="f-reset" id="fReset" type="button">RESET FILTERS</button>
+        </div>
+      </div>
+
+      <!-- TOOLS -->
+      <div class="rail-tools">
+        <button class="nbtn" id="unitBtn" type="button">UNITS · IMPERIAL</button>
+        <button class="nbtn" id="themeBtn" type="button">THEME · AUTO</button>
+        <button class="nbtn" id="followBtn" type="button">FOLLOW · OFF</button>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- reopen tab (desktop, when rail collapsed) -->
+  <button class="rail-tab" id="railTab" type="button" aria-label="Show panel">&rsaquo;</button>
+
 </div>
 
 <!-- ── SCRIPTS (ordered, non-module) ─────────────────────────────────────── -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="js/aircraft.js"></script>
 <script src="js/app.js"></script>
+
+<!-- ── UI SHELL (layout only; decoupled from app logic) ──────────────────── -->
+<script>
+(function(){
+  var rail=document.getElementById('rail'),
+      tgl=document.getElementById('railToggle'),
+      tab=document.getElementById('railTab'),
+      handle=document.getElementById('sheetHandle'),
+      lay=document.getElementById('layersToggle'),
+      ctl=document.querySelector('.map-ctl'),
+      mq=window.matchMedia('(max-width:900px)');
+  function mobile(){return mq.matches;}
+  function setExpanded(v){if(tgl)tgl.setAttribute('aria-expanded',v?'true':'false');}
+  function toggleRail(){
+    if(mobile()){rail.classList.toggle('sheet-open');}
+    else{rail.classList.toggle('collapsed');setExpanded(!rail.classList.contains('collapsed'));}
+  }
+  if(tgl)tgl.addEventListener('click',toggleRail);
+  if(tab)tab.addEventListener('click',function(){rail.classList.remove('collapsed');setExpanded(true);});
+  if(handle)handle.addEventListener('click',function(){rail.classList.toggle('sheet-open');});
+  if(lay&&ctl)lay.addEventListener('click',function(){var s=ctl.classList.toggle('show');lay.classList.toggle('on',s);});
+  function onMQ(){
+    if(mobile()){rail.classList.remove('collapsed');}
+    else{rail.classList.remove('sheet-open');if(ctl)ctl.classList.remove('show');if(lay)lay.classList.remove('on');setExpanded(!rail.classList.contains('collapsed'));}
+  }
+  if(mq.addEventListener)mq.addEventListener('change',onMQ);else if(mq.addListener)mq.addListener(onMQ);
+})();
+</script>
 </body>
 </html>
