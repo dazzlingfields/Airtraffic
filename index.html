@@ -16,9 +16,9 @@
 }catch(e){}})();
 </script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Typography is the system stack (SF on Apple platforms, Segoe/Roboto
+     elsewhere). Dropping the webfont removes two preconnects and a
+     render-blocking stylesheet from the critical path. -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -38,10 +38,9 @@
     Overhead
   </div>
   <span class="nav-sub">ADS-B · LIVE TRAFFIC</span>
-  <span class="nav-mode">RADAR</span>
 
   <div class="appbar-r">
-    <button class="nbtn" id="refreshBtn" type="button">SYNC</button>
+    <button class="nbtn" id="refreshBtn" type="button">Sync</button>
     <div class="sp" id="updPill">SYNC —</div>
     <div class="sp" id="sPill">
       <span class="sd warn" id="sDot"></span>
@@ -64,65 +63,106 @@
       <span class="sd"></span><span id="trafficCount">SCANNING</span>
     </div>
 
-    <!-- layers toggle (mobile affordance) -->
-    <button class="map-fab" id="layersToggle" type="button" aria-label="Layers and overlays" title="Layers &amp; overlays">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    <!-- Single control affordance. Base map, overlays and filters all live
+         behind this one button; nothing else competes with the map. -->
+    <button class="map-fab" id="layersToggle" type="button" aria-label="Layers, overlays and filters" aria-expanded="false" title="Layers &amp; filters">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
     </button>
 
-    <div class="map-ctl">
-      <div class="ctl-h">BASE MAP</div>
-      <div class="seg">
-        <button class="nbtn on" data-base="dark" type="button">DARK</button>
-        <button class="nbtn" data-base="light" type="button">LIGHT</button>
-        <button class="nbtn" data-base="sat" type="button">SAT</button>
-        <button class="nbtn" data-base="terrain" type="button">TERR</button>
-      </div>
-      <div class="ctl-h">OVERLAYS</div>
-      <div class="ov-row">
-        <button class="nbtn on" data-ov="trails" type="button">TRAILS</button>
-        <button class="nbtn on" data-ov="rings" type="button">RINGS</button>
-        <button class="nbtn on" data-ov="airports" type="button">AIRPORTS</button>
-        <button class="nbtn" data-ov="labels" type="button">LABELS</button>
-        <button class="nbtn" data-ov="proc" type="button">APP/DEP</button>
-        <button class="nbtn" data-ov="weather" type="button">WX RADAR</button>
-        <button class="nbtn" data-ov="aero" type="button">AERO CHART</button>
-      </div>
-      <!-- AERO opacity (shown when active) -->
-      <div class="oprow" id="aeroOpRow" style="display:none">
-        <span class="oplab">AERO</span>
-        <input id="aeroOp" type="range" min="20" max="100" value="90" title="Aero chart opacity">
-      </div>
-      <!-- AERO key prompt (shown when no key set) -->
-      <div class="keywrap" id="aeroKeyWrap" style="display:none">
-        <p class="keynote">Airspace &amp; airway chart needs a free <a href="https://www.openaip.net" target="_blank" rel="noopener">openAIP</a> key (one-time).</p>
-        <div class="keyrow">
-          <input id="aeroKeyInput" type="text" placeholder="paste openAIP API key" autocomplete="off" spellcheck="false">
-          <button id="aeroKeySave" type="button">SAVE</button>
+    <!-- ── LAYERS POPOVER ── base map · overlays · filters ── -->
+    <div class="map-ctl" role="dialog" aria-label="Layers and filters">
+
+      <div class="ctl-sec">
+        <div class="ctl-h">Base map</div>
+        <div class="seg">
+          <button class="nbtn on" data-base="dark" type="button">Dark</button>
+          <button class="nbtn" data-base="light" type="button">Light</button>
+          <button class="nbtn" data-base="sat" type="button">Satellite</button>
+          <button class="nbtn" data-base="terrain" type="button">Terrain</button>
         </div>
       </div>
-      <div class="wx-ctl" id="wxCtl">
-        <button id="wxPrev" type="button" title="Previous frame">&#9664;</button>
-        <button id="wxPlay" type="button" title="Play / pause">&#9654;</button>
-        <button id="wxNext" type="button" title="Next frame">&#9654;|</button>
-        <span id="wxTime">—</span>
-        <input id="wxOp" type="range" min="0" max="100" value="60" title="Radar opacity">
+
+      <div class="ctl-sec">
+        <div class="ctl-h">Overlays</div>
+        <div class="ov-row">
+          <button class="nbtn on" data-ov="trails" type="button">Trails</button>
+          <button class="nbtn on" data-ov="rings" type="button">Rings</button>
+          <button class="nbtn on" data-ov="airports" type="button">Airports</button>
+          <button class="nbtn" data-ov="labels" type="button">Labels</button>
+          <button class="nbtn" data-ov="proc" type="button">App / Dep</button>
+          <button class="nbtn" data-ov="weather" type="button">Weather</button>
+          <button class="nbtn" data-ov="aero" type="button">Airspace</button>
+        </div>
+
+        <!-- airspace chart opacity (shown when active) -->
+        <div class="oprow" id="aeroOpRow" style="display:none">
+          <span class="oplab">Opacity</span>
+          <input id="aeroOp" type="range" min="20" max="100" value="90" title="Airspace chart opacity">
+        </div>
+        <!-- airspace key prompt (shown when no key set) -->
+        <div class="keywrap" id="aeroKeyWrap" style="display:none">
+          <p class="keynote">The airspace and airway chart needs a free <a href="https://www.openaip.net" target="_blank" rel="noopener">openAIP</a> key, stored only in this browser.</p>
+          <div class="keyrow">
+            <input id="aeroKeyInput" type="text" placeholder="openAIP API key" autocomplete="off" spellcheck="false">
+            <button id="aeroKeySave" type="button">Save</button>
+          </div>
+        </div>
+        <div class="wx-ctl" id="wxCtl">
+          <button id="wxPrev" type="button" title="Previous frame" aria-label="Previous frame">&#9664;</button>
+          <button id="wxPlay" type="button" title="Play or pause" aria-label="Play or pause">&#9654;</button>
+          <button id="wxNext" type="button" title="Next frame" aria-label="Next frame">&#9654;|</button>
+          <span id="wxTime">—</span>
+          <input id="wxOp" type="range" min="0" max="100" value="60" title="Radar opacity">
+        </div>
       </div>
+
+      <div class="ctl-sec">
+        <div class="ctl-h">Filters</div>
+        <input class="f-search" id="fSearch" type="text" placeholder="Registration, hex or callsign" autocomplete="off" spellcheck="false">
+        <div class="chips">
+          <button class="chip on" data-chip="HEAVY" type="button">Heavy</button>
+          <button class="chip on" data-chip="AIRLINE" type="button">Airline</button>
+          <button class="chip on" data-chip="BIZJET" type="button">Bizjet</button>
+          <button class="chip on" data-chip="GA" type="button">GA</button>
+          <button class="chip on" data-chip="ROTOR" type="button">Rotor</button>
+          <button class="chip on" data-chip="MILITARY" type="button">Military</button>
+          <button class="chip on" data-chip="GROUND" type="button">Ground</button>
+          <button class="chip on" data-chip="OTHER" type="button">Other</button>
+        </div>
+        <div class="f-altrow">
+          <div class="lab"><span>Altitude floor</span><b id="fAltMinV">0k</b></div>
+          <input id="fAltMin" type="range" min="0" max="45000" step="1000" value="0">
+        </div>
+        <div class="f-altrow">
+          <div class="lab"><span>Altitude ceiling</span><b id="fAltMaxV">45k+</b></div>
+          <input id="fAltMax" type="range" min="0" max="45000" step="1000" value="45000">
+        </div>
+        <div class="f-tg">
+          <button class="nbtn" id="fAir" type="button">Airborne</button>
+          <button class="nbtn" id="fMil" type="button">Military</button>
+          <button class="nbtn" id="fEmg" type="button">Emergency</button>
+        </div>
+        <button class="f-reset" id="fReset" type="button">Reset filters</button>
+      </div>
+
+      <div class="ctl-sec ctl-legend">
+        <div class="ctl-h">Altitude</div>
+        <div class="map-legend">
+          <span class="leg-item"><span class="leg-dot" style="background:#98989D"></span>Ground</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#FFD60A"></span>&lt;3k</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#30D158"></span>3–12k</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#64D2FF"></span>12–25k</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#0A84FF"></span>25–36k</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#BF5AF2"></span>36k+</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#FF9F0A"></span>Selected</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#FF375F"></span>Watchlist</span>
+        </div>
+      </div>
+
     </div>
 
-    <div class="map-legend">
-      <span class="leg-item"><span class="leg-dot" style="background:#94a3b8"></span>GND</span>
-      <span class="leg-item"><span class="leg-dot" style="background:#cf9a4a"></span>&lt;3k</span>
-      <span class="leg-item"><span class="leg-dot" style="background:#c9ad57"></span>3–12k</span>
-      <span class="leg-item"><span class="leg-dot" style="background:#57a386"></span>12–25k</span>
-      <span class="leg-item"><span class="leg-dot" style="background:#5594b5"></span>25–36k</span>
-      <span class="leg-item"><span class="leg-dot" style="background:#8d83b3"></span>36k+</span>
-      <span class="leg-item"><span class="leg-dot" style="background:#d99a3a;border-radius:1px"></span>approach</span>
-      <span class="leg-item"><span class="leg-dot" style="background:#6f8190;border-radius:1px"></span>departure</span>
-      <span class="leg-item"><span class="leg-dot" style="background:#d99a3a;border-radius:0;width:11px;height:2px"></span>app/dep path</span>
-    </div>
-
-    <button class="map-recenter" id="recenterBtn" type="button" title="Center on my location" aria-label="Center on my location">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3.2M12 18.3v3.2M2.5 12h3.2M18.3 12h3.2"/></svg>
+    <button class="map-recenter" id="recenterBtn" type="button" title="Centre on my location" aria-label="Centre on my location">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3.2M12 18.3v3.2M2.5 12h3.2M18.3 12h3.2"/></svg>
     </button>
 
     <!-- live status strip -->
@@ -134,10 +174,22 @@
     </div>
   </div>
 
+  <!-- scrim behind the mobile sheet -->
+  <div class="sheet-scrim" id="sheetScrim"></div>
+
   <!-- COMMAND RAIL (floating glass; bottom sheet on mobile) -->
   <aside class="rail" id="rail">
     <button class="sheet-handle" id="sheetHandle" type="button" aria-label="Expand or collapse panel"></button>
     <div class="rail-scroll">
+
+      <!-- WATCHLIST · renders only when a tracked registration is contactable -->
+      <div class="card cp watch" id="watchCard" style="display:none">
+        <div class="phead">
+          <span class="ph-t">Watchlist</span>
+          <span id="watchCount" class="wl-count">0/3</span>
+        </div>
+        <div id="watchList" class="wl-list"></div>
+      </div>
 
       <!-- NEAREST quick-strip — appears when you inspect a different aircraft -->
       <button class="nearbar" id="nearBar" type="button" style="display:none"></button>
@@ -145,7 +197,7 @@
       <!-- PRIMARY TARGET · flight strip (selected aircraft; defaults to nearest) -->
       <div class="card strip" id="primaryCard">
         <div class="phead">
-          <span class="ph-t" id="primaryEyebrow">PRIMARY TARGET</span>
+          <span class="ph-t" id="primaryEyebrow">Primary target</span>
           <span id="selPill">NONE</span>
         </div>
         <div id="primaryBody">
@@ -155,24 +207,24 @@
 
       <!-- DISRUPTIONS -->
       <div class="card cp">
-        <div class="phead"><span class="ph-t">DISRUPTIONS</span><span id="disCount" class="dis-cnt">0</span></div>
+        <div class="phead"><span class="ph-t">Disruptions</span><span id="disCount" class="dis-cnt">0</span></div>
         <div id="disList"><div class="empty">No diversions, holds or emergencies detected.</div></div>
       </div>
 
       <!-- TRAFFIC IN RANGE -->
       <div class="card cp">
-        <div class="phead"><span class="ph-t">TRAFFIC IN RANGE</span></div>
+        <div class="phead"><span class="ph-t">Traffic in range</span></div>
         <div id="nbList"><div class="empty">No returns yet.</div></div>
       </div>
 
       <!-- FIELD STATS -->
       <div class="card cp">
-        <div class="phead clk" data-collapse><span class="ph-t">FIELD STATS</span></div>
+        <div class="phead clk" data-collapse><span class="ph-t">Field stats</span></div>
         <div class="card-body">
           <div class="stat-grid">
             <div class="stat-tile"><div class="n" id="statTracked">0</div><div class="l">Tracked</div></div>
             <div class="stat-tile"><div class="n" id="statShown">0</div><div class="l">Shown</div></div>
-            <div class="stat-tile"><div class="n" id="statNearby">0</div><div class="l">In Range</div></div>
+            <div class="stat-tile"><div class="n" id="statNearby">0</div><div class="l">In range</div></div>
             <div class="stat-tile"><div class="n" id="statAir">0</div><div class="l">Airborne</div></div>
             <div class="stat-tile"><div class="n" id="statEmerg">0</div><div class="l">Emerg</div></div>
           </div>
@@ -183,38 +235,6 @@
             <div class="sup-row"><span class="sk">Highest</span><span class="sv" id="supHighest">—</span></div>
             <div class="sup-row"><span class="sk">Fastest</span><span class="sv" id="supFastest">—</span></div>
           </div>
-        </div>
-      </div>
-
-      <!-- FILTERS -->
-      <div class="card cp">
-        <div class="phead clk" data-collapse><span class="ph-t">FILTERS</span></div>
-        <div class="card-body">
-          <input class="f-search" id="fSearch" type="text" placeholder="Search reg / hex / callsign…" autocomplete="off" spellcheck="false">
-          <div class="chips">
-            <button class="chip on" data-chip="HEAVY" type="button">HEAVY</button>
-            <button class="chip on" data-chip="AIRLINE" type="button">AIRLINE</button>
-            <button class="chip on" data-chip="BIZJET" type="button">BIZJET</button>
-            <button class="chip on" data-chip="GA" type="button">GA</button>
-            <button class="chip on" data-chip="ROTOR" type="button">ROTOR</button>
-            <button class="chip on" data-chip="MILITARY" type="button">MIL</button>
-            <button class="chip on" data-chip="GROUND" type="button">GROUND</button>
-            <button class="chip on" data-chip="OTHER" type="button">OTHER</button>
-          </div>
-          <div class="f-altrow">
-            <div class="lab"><span>ALT FLOOR</span><b id="fAltMinV">0k</b></div>
-            <input id="fAltMin" type="range" min="0" max="45000" step="1000" value="0">
-          </div>
-          <div class="f-altrow">
-            <div class="lab"><span>ALT CEILING</span><b id="fAltMaxV">45k+</b></div>
-            <input id="fAltMax" type="range" min="0" max="45000" step="1000" value="45000">
-          </div>
-          <div class="f-tg">
-            <button class="nbtn" id="fAir" type="button">AIRBORNE</button>
-            <button class="nbtn" id="fMil" type="button">MILITARY</button>
-            <button class="nbtn" id="fEmg" type="button">EMERGENCY</button>
-          </div>
-          <button class="f-reset" id="fReset" type="button">RESET FILTERS</button>
         </div>
       </div>
 
@@ -237,33 +257,5 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="js/aircraft.js"></script>
 <script src="js/app.js"></script>
-
-<!-- ── UI SHELL (layout only; decoupled from app logic) ──────────────────── -->
-<script>
-(function(){
-  var rail=document.getElementById('rail'),
-      tgl=document.getElementById('railToggle'),
-      tab=document.getElementById('railTab'),
-      handle=document.getElementById('sheetHandle'),
-      lay=document.getElementById('layersToggle'),
-      ctl=document.querySelector('.map-ctl'),
-      mq=window.matchMedia('(max-width:900px)');
-  function mobile(){return mq.matches;}
-  function setExpanded(v){if(tgl)tgl.setAttribute('aria-expanded',v?'true':'false');}
-  function toggleRail(){
-    if(mobile()){rail.classList.toggle('sheet-open');}
-    else{rail.classList.toggle('collapsed');setExpanded(!rail.classList.contains('collapsed'));}
-  }
-  if(tgl)tgl.addEventListener('click',toggleRail);
-  if(tab)tab.addEventListener('click',function(){rail.classList.remove('collapsed');setExpanded(true);});
-  if(handle)handle.addEventListener('click',function(){rail.classList.toggle('sheet-open');});
-  if(lay&&ctl)lay.addEventListener('click',function(){var s=ctl.classList.toggle('show');lay.classList.toggle('on',s);});
-  function onMQ(){
-    if(mobile()){rail.classList.remove('collapsed');}
-    else{rail.classList.remove('sheet-open');if(ctl)ctl.classList.remove('show');if(lay)lay.classList.remove('on');setExpanded(!rail.classList.contains('collapsed'));}
-  }
-  if(mq.addEventListener)mq.addEventListener('change',onMQ);else if(mq.addListener)mq.addListener(onMQ);
-})();
-</script>
 </body>
 </html>
