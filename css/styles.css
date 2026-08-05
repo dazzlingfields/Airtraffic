@@ -645,3 +645,416 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 
 /* honour reduced motion for the new transitions too */
 @media(prefers-reduced-motion:reduce){.rail,.hmb span{transition:none!important;}}
+
+
+/* ============================================================================
+   v10 · APPLE PASS
+   ----------------------------------------------------------------------------
+   This block is authoritative for surface, type and colour, and is written as
+   one contiguous section so the whole visual direction can be reverted by
+   deleting from this banner to the end of the file.
+
+   It works by subtraction expressed as override, since the earlier sections
+   are being kept: one material instead of five, one accent instead of an amber
+   plus six category hues, one radius family, three type sizes, and sentence
+   case in place of letter-spaced uppercase. Everything that is not the map is
+   pushed down the visual hierarchy or moved behind the single layers control.
+   ========================================================================== */
+
+/* ── TOKENS ──────────────────────────────────────────────────────────────── */
+:root{
+  /* surfaces — neutral greys, no blue cast */
+  --bg:#0a0a0c;--bg2:#0a0a0c;
+  --panel:#1c1c1e;--panel2:#2c2c2e;--panel3:#141416;
+  --line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);
+  --tx:#f5f5f7;--mu:#8e8e93;--mu2:#aeaeb2;
+
+  /* one accent; the rest are status only */
+  --A:#0A84FF;--G:#30D158;--C:#64D2FF;--R:#FF453A;--O:#FF9F0A;
+  --W:#FF375F;                                  /* watchlist */
+
+  /* one radius family */
+  --r:12px;--r2:8px;--r3:18px;
+
+  --strip:#1c1c1e;
+  --amber-soft:rgba(10,132,255,.14);--amber-line:rgba(10,132,255,.55);
+
+  /* one material */
+  --glass:rgba(28,28,30,.72);
+  --glass-blur:blur(24px) saturate(180%);
+  --hair:rgba(255,255,255,.10);
+  --bevel:none;
+  --elev:0 12px 32px rgba(0,0,0,.36);
+  --inset:none;
+
+  /* system stack: SF on Apple platforms, host UI font elsewhere */
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,system-ui,sans-serif;
+  --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
+
+  /* three type sizes, plus the one display size for a registration */
+  --t-cap:11px;--t-body:13px;--t-lead:15px;--t-disp:26px;
+
+  /* phase + category colours collapse onto the neutral ramp */
+  --ph-app:#FF9F0A;--ph-dep:#64D2FF;--ph-des:#aeaeb2;--ph-crz:#8e8e93;
+  --ph-enr:#8e8e93;--ph-gnd:#8e8e93;
+  --ch:#aeaeb2;--ca:#aeaeb2;--cb:#aeaeb2;--cg:#aeaeb2;
+  --cr:#aeaeb2;--cm:#aeaeb2;--cgr:#aeaeb2;--cx:#aeaeb2;
+}
+:root[data-theme="light"]{
+  --bg:#f2f2f7;--bg2:#f2f2f7;
+  --panel:#ffffff;--panel2:#f2f2f7;--panel3:#e5e5ea;
+  --line:rgba(0,0,0,.10);--line2:rgba(0,0,0,.16);
+  --tx:#1c1c1e;--mu:#8e8e93;--mu2:#6c6c70;
+  --A:#007AFF;--G:#34C759;--C:#32ADE6;--R:#FF3B30;--O:#FF9500;--W:#FF2D55;
+  --strip:#ffffff;
+  --amber-soft:rgba(0,122,255,.10);--amber-line:rgba(0,122,255,.45);
+  --glass:rgba(255,255,255,.76);
+  --hair:rgba(0,0,0,.10);
+  --elev:0 12px 32px rgba(0,0,0,.12);
+}
+
+/* ── TYPE ────────────────────────────────────────────────────────────────── */
+body{
+  font-family:var(--font);
+  font-size:var(--t-body);
+  line-height:1.42;
+  letter-spacing:-.01em;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+/* Telemetry must not reflow as digits change width. */
+.reg-big,.sp,#updPill,.map-status,.st-k,.stat-tile .n,.sv,.wl-tel,.wl-reg,
+.alt-tape,.tape-v,.nb-alt,.nb-dist,.dis-cnt,.wl-count,#trafficCount{
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+}
+/* Labels lose the letter-spaced uppercase treatment; case now comes from the
+   markup, which reads as sentence case. */
+.ph-t,.ctl-h,.nc-ey,.nav-sub,.stat-tile .l,.sk,.oplab{
+  font-family:var(--font);
+  font-size:var(--t-cap);
+  font-weight:590;
+  letter-spacing:0;
+  text-transform:none;
+  color:var(--mu);
+}
+.nav-sub{font-size:var(--t-cap);color:var(--mu);letter-spacing:0;text-transform:none;}
+.nav-mode{display:none;}
+.reg-big{font-family:var(--font);font-size:var(--t-disp);font-weight:680;letter-spacing:-.02em;}
+
+/* ── COMMAND BAR ─────────────────────────────────────────────────────────── */
+.appbar{
+  padding:10px 14px;gap:11px;
+  background:var(--glass);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border-bottom:1px solid var(--hair);
+  box-shadow:none;
+}
+.appbar::after{display:none;}                 /* the amber underglow goes */
+.nav-logo{font-size:var(--t-lead);font-weight:640;letter-spacing:-.02em;}
+.logo-mark{
+  width:26px;height:26px;border-radius:var(--r2);
+  background:var(--panel2);border:1px solid var(--hair);
+}
+.hmb{
+  width:34px;height:30px;border-radius:var(--r2);
+  background:var(--panel2);border:1px solid var(--hair);
+  box-shadow:none;
+}
+.hmb span{background:var(--mu2);}
+.hmb:hover{border-color:var(--line2);background:var(--panel3);}
+.hmb:hover span{background:var(--tx);}
+
+/* ── CONTROLS ────────────────────────────────────────────────────────────── */
+.nbtn,.chip{
+  font-family:var(--font);
+  font-size:var(--t-cap);
+  font-weight:560;
+  letter-spacing:0;
+  text-transform:none;
+  color:var(--mu2);
+  background:var(--panel2);
+  border:1px solid transparent;
+  border-radius:var(--r2);
+  padding:7px 11px;
+  transition:background .16s ease,color .16s ease;
+}
+.nbtn:hover,.chip:hover{background:var(--panel3);color:var(--tx);border-color:transparent;}
+.nbtn.on,.chip.on{color:#fff;background:var(--A);border-color:transparent;}
+:root[data-theme="light"] .nbtn.on,
+:root[data-theme="light"] .chip.on{color:#fff;}
+.sp{
+  border-radius:var(--r2);border:1px solid var(--hair);
+  background:var(--panel2);font-family:var(--font);
+  font-size:var(--t-cap);font-weight:560;letter-spacing:0;padding:6px 10px;
+}
+.sd{box-shadow:none;animation:none;}
+.sd.warn,.sd.bad{box-shadow:none;}
+
+/* segmented control, the way iOS renders one */
+.seg{
+  display:flex;gap:2px;padding:2px;
+  background:var(--panel3);border-radius:10px;border:1px solid var(--hair);
+}
+.seg .nbtn{
+  flex:1;background:transparent;border:none;border-radius:8px;
+  padding:6px 4px;text-align:center;
+}
+.seg .nbtn.on{background:var(--panel);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.28);}
+:root[data-theme="light"] .seg .nbtn.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.14);}
+
+/* ── SURFACES: one material everywhere ───────────────────────────────────── */
+.rail{
+  left:14px;top:14px;bottom:14px;
+  width:min(360px,calc(100% - 28px));
+  border-radius:var(--r3);
+  background:var(--glass);
+  border:1px solid var(--hair);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  box-shadow:var(--elev);
+}
+.rail-scroll{padding:12px;gap:10px;}
+.rail-scroll::-webkit-scrollbar{width:6px}
+.rail-scroll::-webkit-scrollbar-thumb{background:var(--line2);border:none;border-radius:6px;}
+
+/* Cards sit inside the glass, so they are separated by tone alone: no second
+   border, no second shadow, no gradient. */
+.rail .card,.rail .card.strip{
+  background:var(--panel);
+  border:1px solid var(--hair);
+  border-radius:var(--r);
+  box-shadow:none;
+}
+.rail .card.strip{background:var(--panel);}
+.cp{padding:12px;}
+.phead{margin-bottom:9px;}
+.phead.clk::after{color:var(--mu);font-family:var(--font);font-size:15px;font-weight:400;}
+.empty{
+  border:none;background:var(--panel3);border-radius:var(--r2);
+  padding:14px;color:var(--mu);font-family:var(--font);font-size:var(--t-body);
+}
+.nc-ey::before{background:var(--A);}
+.stat-tile{background:var(--panel3);border:none;border-radius:var(--r2);}
+.stat-tile .n{font-weight:620;letter-spacing:-.02em;}
+.rail-tools .nbtn{border-radius:var(--r2);}
+
+/* ── MAP CHROME: pushed down the hierarchy ───────────────────────────────── */
+/* The scope texture and vignette are removed; the basemap should look like a
+   map, not like a CRT. */
+.mapwrap::before,.mapwrap::after{display:none!important;}
+
+.map-badge{
+  top:14px;left:50%;transform:translateX(-50%);
+  border-radius:999px;padding:6px 12px;
+  background:var(--glass);border:1px solid var(--hair);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  box-shadow:var(--elev);
+  font-family:var(--font);font-size:var(--t-cap);font-weight:560;
+  letter-spacing:0;text-transform:none;color:var(--mu2);
+}
+.map-status{
+  background:var(--glass);border:1px solid var(--hair);border-radius:999px;
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  font-family:var(--mono);font-size:10px;color:var(--mu);
+  padding:5px 11px;box-shadow:var(--elev);opacity:.85;
+}
+.map-status:hover{opacity:1;}
+
+/* Both floating buttons share one shape and one material. */
+.map-fab,.map-recenter{
+  position:absolute;right:14px;
+  width:42px;height:42px;display:grid;place-items:center;
+  border-radius:var(--r);
+  background:var(--glass);border:1px solid var(--hair);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  box-shadow:var(--elev);color:var(--tx);cursor:pointer;
+  transition:background .16s ease,color .16s ease;
+}
+.map-fab{top:14px;z-index:836;}
+.map-recenter{top:64px;bottom:auto;z-index:835;}
+.map-fab:hover,.map-recenter:hover{background:var(--panel2);border-color:var(--line2);color:var(--tx);}
+.map-fab.on{background:var(--A);border-color:transparent;color:#fff;}
+
+/* ── LAYERS POPOVER ──────────────────────────────────────────────────────────
+   Base map, overlays and filters now live behind the single layers button at
+   every breakpoint, not just on mobile. Nothing is docked over the map. */
+.map-ctl{
+  position:absolute;top:64px;right:14px;left:auto;bottom:auto;
+  width:min(316px,calc(100vw - 28px));max-height:min(72vh,620px);
+  overflow-y:auto;overscroll-behavior:contain;
+  display:block;
+  padding:14px;z-index:838;
+  border-radius:var(--r3);
+  background:var(--glass);border:1px solid var(--hair);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  box-shadow:var(--elev);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transform:translateY(-6px) scale(.98);transform-origin:top right;
+  transition:opacity .18s ease,transform .18s ease,visibility 0s linear .18s;
+}
+.map-ctl.show{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transform:translateY(0) scale(1);
+  transition:opacity .18s ease,transform .18s ease,visibility 0s;
+}
+.map-ctl::-webkit-scrollbar{width:6px}
+.map-ctl::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:none;}
+.ctl-sec{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid var(--hair);}
+.ctl-sec:last-child{padding-bottom:0;margin-bottom:0;border-bottom:none;}
+.ctl-h{margin-bottom:8px;}
+.ov-row{display:flex;flex-wrap:wrap;gap:6px;}
+.ov-row .nbtn{flex:0 0 auto;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.f-search{
+  width:100%;margin-bottom:10px;padding:9px 11px;
+  background:var(--panel3);border:1px solid transparent;border-radius:var(--r2);
+  color:var(--tx);font-family:var(--font);font-size:var(--t-body);
+}
+.f-search:focus{outline:none;border-color:var(--A);background:var(--panel2);}
+.f-altrow{margin-bottom:10px;}
+.f-altrow .lab{
+  display:flex;justify-content:space-between;
+  font-size:var(--t-cap);color:var(--mu);margin-bottom:5px;
+}
+.f-altrow .lab b{color:var(--tx);font-weight:590;font-variant-numeric:tabular-nums;}
+.f-tg{display:flex;gap:6px;margin-bottom:10px;}
+.f-tg .nbtn{flex:1;text-align:center;}
+.f-reset{
+  width:100%;padding:9px;border:none;border-radius:var(--r2);
+  background:var(--panel3);color:var(--A);cursor:pointer;
+  font-family:var(--font);font-size:var(--t-body);font-weight:560;
+}
+.f-reset:hover{background:var(--panel2);}
+
+/* Range inputs, iOS style. */
+.map-ctl input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:4px;
+  background:var(--line2);border-radius:2px;outline:none;
+}
+.map-ctl input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:18px;height:18px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer;
+}
+.map-ctl input[type=range]::-moz-range-thumb{
+  width:18px;height:18px;border:none;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer;
+}
+
+/* legend now lives inside the popover rather than floating on the map */
+.map-legend{
+  position:static;display:flex;flex-wrap:wrap;gap:7px 12px;
+  background:none;border:none;box-shadow:none;padding:0;max-width:none;
+}
+.leg-item{font-size:var(--t-cap);color:var(--mu2);display:inline-flex;align-items:center;gap:6px;}
+.leg-dot{width:9px;height:9px;border-radius:50%;}
+
+/* ── WATCHLIST ───────────────────────────────────────────────────────────────
+   Height follows the number of matches; the card is display:none when the set
+   is empty, so it occupies no space at all rather than showing an empty state. */
+.card.watch{border-color:rgba(255,55,95,.28);}
+.wl-count{
+  font-family:var(--font);font-size:var(--t-cap);font-weight:590;
+  color:var(--W);background:rgba(255,55,95,.14);
+  padding:2px 8px;border-radius:999px;
+}
+.wl-list{display:flex;flex-direction:column;gap:6px;}
+.wl-row{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:9px 10px;cursor:pointer;
+  background:var(--panel3);border:1px solid transparent;border-radius:var(--r2);
+  transition:background .16s ease;
+}
+.wl-row:hover{background:var(--panel2);}
+.wl-row.air{border-color:rgba(255,55,95,.32);}
+.wl-row.lost{opacity:.62;}
+.wl-ic{flex-shrink:0;width:22px;height:22px;display:grid;place-items:center;color:var(--W);}
+.wl-row.gnd .wl-ic{color:var(--mu2);}
+.wl-row.lost .wl-ic{color:var(--mu);}
+.wl-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px;}
+.wl-top{display:flex;align-items:center;gap:7px;}
+.wl-reg{font-size:var(--t-body);font-weight:640;letter-spacing:-.01em;color:var(--tx);}
+.wl-state{
+  font-size:9px;font-weight:620;letter-spacing:.02em;
+  padding:2px 6px;border-radius:999px;
+}
+.wl-state.air{color:var(--W);background:rgba(255,55,95,.16);}
+.wl-state.gnd{color:var(--mu2);background:var(--panel2);}
+.wl-state.lost{color:var(--mu);background:var(--panel2);}
+.wl-where{font-size:var(--t-body);color:var(--mu2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.wl-tel{font-size:var(--t-cap);color:var(--mu);}
+.wl-age{font-size:10px;color:var(--mu);font-style:italic;}
+.wl-go{color:var(--mu);font-size:17px;line-height:1;flex-shrink:0;}
+
+/* ── LEAFLET SKIN ────────────────────────────────────────────────────────── */
+.leaflet-control-zoom,.leaflet-control-attribution{border-radius:var(--r2)!important;}
+.leaflet-control-zoom a{
+  background:var(--glass)!important;color:var(--tx)!important;
+  border-color:var(--hair)!important;
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+}
+.leaflet-popup-content-wrapper{
+  background:var(--glass)!important;
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--hair)!important;
+  border-radius:var(--r)!important;box-shadow:var(--elev)!important;
+}
+.leaflet-popup-tip{background:var(--glass)!important;border:1px solid var(--hair)!important;}
+.plane-lbl{
+  background:var(--glass)!important;border:1px solid var(--hair)!important;
+  border-radius:6px!important;color:var(--tx)!important;
+  font-family:var(--font)!important;font-size:10px!important;font-weight:560!important;
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+}
+
+/* ── MOBILE SHEET ────────────────────────────────────────────────────────── */
+.sheet-scrim{
+  position:absolute;inset:0;z-index:840;display:none;
+  background:rgba(0,0,0,.32);
+  opacity:0;transition:opacity .28s ease;
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+}
+.sheet-scrim.on{opacity:1;}
+@media(max-width:900px){
+  .sheet-scrim{display:block;pointer-events:none;}
+  .sheet-scrim.on{pointer-events:auto;}
+  .rail{
+    left:0;right:0;bottom:0;top:auto;width:auto;height:86dvh;z-index:850;
+    border-radius:var(--r3) var(--r3) 0 0;border-bottom:none;
+    transform:translateY(calc(100% - 144px));
+    box-shadow:0 -12px 40px rgba(0,0,0,.42);
+  }
+  .sheet-handle::before{background:var(--line2);width:38px;height:5px;border-radius:3px;}
+  .map-ctl{
+    top:auto;bottom:14px;left:14px;right:14px;width:auto;
+    max-height:64dvh;transform-origin:bottom center;
+    transform:translateY(8px) scale(.98);
+  }
+  .map-ctl.show{transform:translateY(0) scale(1);}
+  .map-status{display:none;}
+  .map-badge{top:12px;}
+  .map-fab{top:12px;right:12px;}
+  .map-recenter{top:62px;right:12px;}
+}
+@media(max-width:560px){
+  .appbar{padding:9px 12px;gap:9px;}
+  .nav-sub{display:none;}
+  #updPill{display:none;}
+}
+
+/* ── FOCUS ───────────────────────────────────────────────────────────────── */
+.nbtn:focus-visible,.chip:focus-visible,.map-fab:focus-visible,.map-recenter:focus-visible,
+.nb-btn:focus-visible,.nearbar:focus-visible,.sheet-handle:focus-visible,
+.wl-row:focus-visible,.f-search:focus-visible,.f-reset:focus-visible{
+  outline:2px solid var(--A);outline-offset:2px;
+}
+
+@media(prefers-reduced-motion:reduce){
+  .rail,.map-ctl,.sheet-scrim,.nbtn,.chip,.wl-row{transition:none!important;}
+}
+
+/* Earlier sections hid the layers panel and the legend below 900px, back when
+   the panel was a mobile-only affordance. Both are now first-class at every
+   breakpoint, so those rules are released here. */
+@media(max-width:900px){
+  .map-ctl{display:block;}
+  .map-legend{display:flex;}
+}
