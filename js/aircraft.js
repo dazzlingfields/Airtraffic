@@ -1,10 +1,27 @@
 /* ============================================================================
    OVERHEAD · Aircraft classification + iconography
    Pure functions exposed on window.AC. No external state.
+
    Top-down silhouettes graded by AIRFRAME: shape follows engine count and
    layout (twin vs quad widebody, trijet, quad-turboprop, fighter, flying wing,
    tandem rotor), and pixel size follows the type's real wingspan. Surface
    targets (ADS-B category C*) render as ground vehicles, not aircraft.
+
+   ── v2 GEOMETRY NOTES ──────────────────────────────────────────────────────
+   · Fuselages use an ogive nose (cubic) and a tapered tail cone (quadratic)
+     rather than the old straight wedge, which read as a dart at small sizes.
+   · Wings carry a mid-span station, so the leading edge sweeps and the
+     trailing edge kinks at the root fairing (the "Yehudi" on the 737/A320
+     family). A single trapezoid cannot express that and looked generic.
+   · Nacelles are joined to the wing by a pylon instead of floating beside it.
+   · A vertical fin sliver sits on the centreline aft, as seen from above.
+   · Separation from the basemap is a stroke baked into the SVG via
+     paint-order, NOT a CSS drop-shadow filter. Two filter passes across
+     several hundred simultaneous divIcons was the largest per-frame
+     compositing cost in the previous build.
+   · Every shape is translated so its geometric centre sits on (16,16), so a
+     CSS rotate() about the element centre pivots about the true centroid.
+     Previously GA singles and rotorcraft orbited a point behind themselves.
    ========================================================================== */
 (function(){
 'use strict';
@@ -109,98 +126,273 @@ function acCategory(kind){
 /* Filter chip keys, in display order */
 const CHIPS=['HEAVY','AIRLINE','BIZJET','GA','ROTOR','MILITARY','GROUND','OTHER'];
 
-/* ── SILHOUETTE BUILDER (viewBox 0 0 32 32, nose toward y=0) ──────────────── */
-function wing(c,rootY,rootChord,span,tipY,tipChord){
-  const tw=tipChord==null?1.4:tipChord;
-  return`<path fill="${c}" d="M16 ${f(rootY)} `+
-    `L${f(16-span)} ${f(tipY)} L${f(16-span+0.9)} ${f(tipY+tw)} `+
-    `L16 ${f(rootY+rootChord)} `+
-    `L${f(16+span-0.9)} ${f(tipY+tw)} L${f(16+span)} ${f(tipY)} Z"/>`;
+/* ══ GEOMETRY PRIMITIVES ═════════════════════════════════════════════════════
+   All shapes are authored in a 0 0 32 32 viewBox, nose toward y=0, centreline
+   on x=16. Paths carry no fill or stroke of their own; the parent <g> supplies
+   both. That keeps the markup small and lets makeIcon() recolour the whole
+   silhouette by touching a single attribute. */
+
+/* Fuselage: ogive nose, parallel mid-body, tapered tail cone.
+     ny  nose tip y            nl  nose length (tip to full width)
+     fw  half-width            ty  tail extremity y
+     tw  tail cone half-width at the extremity                                */
+function fuse(o){
+  const fw=o.fw, ny=o.ny, nl=o.nl==null?o.fw*2.4:o.nl, ty=o.ty,
+        tw=o.tw==null?Math.max(0.18,fw*0.16):o.tw;
+  const ns=ny+nl;                       // full width reached here
+  const ts=ty-(ty-ns)*0.26;             // tail cone begins here
+  const cq=ty-(ty-ts)*0.30;             // tail cone control point
+  return`M16 ${f(ny)}`+
+    `C${f(16+fw*0.60)} ${f(ny+nl*0.28)} ${f(16+fw)} ${f(ny+nl*0.60)} ${f(16+fw)} ${f(ns)}`+
+    `L${f(16+fw)} ${f(ts)}`+
+    `Q${f(16+fw)} ${f(cq)} ${f(16+tw)} ${f(ty)}`+
+    `L${f(16-tw)} ${f(ty)}`+
+    `Q${f(16-fw)} ${f(cq)} ${f(16-fw)} ${f(ts)}`+
+    `L${f(16-fw)} ${f(ns)}`+
+    `C${f(16-fw)} ${f(ny+nl*0.60)} ${f(16-fw*0.60)} ${f(ny+nl*0.28)} 16 ${f(ny)}Z`;
 }
-function plane(c,o){
-  const fw=o.fw, sh=o.ny+(o.nl==null?fw*2.4:o.nl);
-  let s=`<path fill="${c}" d="M16 ${f(o.ny)} `+
-    `L${f(16+fw)} ${f(sh)} L${f(16+fw)} ${f(o.ty-fw)} `+
-    `Q${f(16+fw)} ${f(o.ty)} 16 ${f(o.ty)} `+
-    `Q${f(16-fw)} ${f(o.ty)} ${f(16-fw)} ${f(o.ty-fw)} `+
-    `L${f(16-fw)} ${f(sh)} Z"/>`;
-  s+=wing(c,o.wy,o.wrt,o.ws,o.wtipy,o.wtw);
-  s+=wing(c,o.sy,o.srt||1.2,o.ss,o.sty,o.stw||0.9);
-  if(o.eng)for(const e of o.eng){
-    s+=`<rect x="${f(16-e.dx-e.w)}" y="${f(e.y)}" width="${f(e.w*2)}" height="${f(e.h)}" rx="${f(e.w*0.8)}" fill="${c}"/>`;
-    s+=`<rect x="${f(16+e.dx-e.w)}" y="${f(e.y)}" width="${f(e.w*2)}" height="${f(e.h)}" rx="${f(e.w*0.8)}" fill="${c}"/>`;
+
+/* One semi-span with a mid-span station.
+     y0  root leading edge     rc  root chord        sp  semi-span
+     tipY  tip leading edge y  tc  tip chord
+     k   kink position as a fraction of semi-span
+     le  fraction of total LE sweep reached at the kink. le>k gives a more
+         steeply swept inboard leading edge (a glove or LERX); le==k is straight
+     te  fraction of total TE sweep reached at the kink. te<k holds the inboard
+         trailing edge nearly square to the fuselage before it sweeps aft,
+         which is what produces the Yehudi on the 737/A320 family
+
+   Both edges are interpolated between their own root and tip endpoints, so the
+   chord shrinks monotonically root → kink → tip. The earlier version derived
+   the kink trailing edge from a chord fraction, which let it fall forward of
+   the root trailing edge and cut a notch into the wing.
+   sgn selects the left or right side.                                        */
+function semiWing(o,sgn){
+  const k=o.k==null?0.32:o.k, le=o.le==null?k*1.18:o.le, te=o.te==null?k*0.34:o.te;
+  const xk=16+sgn*o.sp*k, xt=16+sgn*o.sp;
+  const ytLE=o.tipY, yrTE=o.y0+o.rc, ytTE=ytLE+o.tc;
+  const ykLE=o.y0+(ytLE-o.y0)*le;
+  const ykTE=yrTE+(ytTE-yrTE)*te;
+  const xr=xt-sgn*0.30;                  // slight tip chord inset
+  return`M16 ${f(o.y0)}L${f(xk)} ${f(ykLE)}L${f(xt)} ${f(ytLE)}`+
+    `Q${f(xt+sgn*0.20)} ${f((ytLE+ytTE)/2)} ${f(xr)} ${f(ytTE)}`+
+    `L${f(xk)} ${f(ykTE)}L16 ${f(yrTE)}Z`;
+}
+const wingPair=o=>semiWing(o,-1)+semiWing(o,1);
+
+/* Vertical fin, seen edge-on from above: a narrow blade on the centreline. */
+function fin(o){
+  const w=o.w==null?0.42:o.w;
+  return`M16 ${f(o.y0)}L${f(16+w)} ${f(o.y0+o.h*0.55)}L${f(16+w*0.7)} ${f(o.y0+o.h)}`+
+    `L${f(16-w*0.7)} ${f(o.y0+o.h)}L${f(16-w)} ${f(o.y0+o.h*0.55)}Z`;
+}
+
+/* Wing leading-edge y at a given distance from the centreline. Nacelle and
+   propeller stations are derived from this rather than hand-authored, so a
+   pylon can never float ahead of the wing it is supposed to hang from. */
+function leAt(o,dx){
+  const sp=o.ws, k=o.wk==null?0.32:o.wk, le=o.wle==null?k*1.18:o.wle;
+  const fr=Math.min(1,Math.abs(dx)/sp);
+  const ykLE=o.wy+(o.wtipy-o.wy)*le;
+  return fr<=k ? o.wy+(ykLE-o.wy)*(fr/k)
+               : ykLE+(o.wtipy-ykLE)*((fr-k)/(1-k));
+}
+
+/* Podded nacelle plus the pylon joining it to the structure.
+     dx  station from centreline    w  half-width    h  length
+     yLE leading-edge y at that station (supplied by plane())
+     side  true for rear-fuselage mounts, which take a horizontal stub pylon
+           to the fuselage side instead of a vertical one to the wing        */
+function nacellePair(e){
+  const w=e.w, h=e.h, r=w*0.9;
+  const y=e.side ? e.y : e.yLE-h*0.62;      // wing pods protrude ahead of the LE
+  let s='';
+  for(const sgn of[-1,1]){
+    const x=16+sgn*e.dx;
+    s+=`<path d="M${f(x-w)} ${f(y+r)}Q${f(x-w)} ${f(y)} ${f(x)} ${f(y)}`+
+       `Q${f(x+w)} ${f(y)} ${f(x+w)} ${f(y+r)}L${f(x+w)} ${f(y+h-r*0.7)}`+
+       `Q${f(x+w)} ${f(y+h)} ${f(x)} ${f(y+h)}Q${f(x-w)} ${f(y+h)} ${f(x-w)} ${f(y+h-r*0.7)}Z"/>`;
+    if(e.side){
+      // horizontal stub from the fuselage flank to the nacelle
+      const xi=16+sgn*(e.fw||1.2), xo=x-sgn*w*0.4;
+      s+=`<path d="M${f(xi)} ${f(y+h*0.24)}L${f(xo)} ${f(y+h*0.30)}`+
+         `L${f(xo)} ${f(y+h*0.62)}L${f(xi)} ${f(y+h*0.58)}Z"/>`;
+    }else{
+      // vertical pylon from the nacelle back onto the wing leading edge
+      const py=e.yLE+0.35;
+      s+=`<path d="M${f(x-w*0.30)} ${f(y+h*0.45)}L${f(x+w*0.30)} ${f(y+h*0.45)}`+
+         `L${f(x+w*0.20)} ${f(py)}L${f(x-w*0.20)} ${f(py)}Z"/>`;
+    }
   }
-  if(o.ceng)s+=`<rect x="${f(16-o.ceng.w)}" y="${f(o.ceng.y)}" width="${f(o.ceng.w*2)}" height="${f(o.ceng.h)}" rx="${f(o.ceng.w*0.8)}" fill="${c}"/>`;
-  if(o.prop)for(const p of o.prop){
-    s+=`<circle cx="${f(16-p.dx)}" cy="${f(p.y)}" r="${f(p.r)}" fill="none" stroke="${c}" stroke-width="0.9" opacity=".75"/>`;
-    s+=`<circle cx="${f(16+p.dx)}" cy="${f(p.y)}" r="${f(p.r)}" fill="none" stroke="${c}" stroke-width="0.9" opacity=".75"/>`;
+  return s;
+}
+
+/* Turboprop nacelle: streamlined pod with a spinner and a faint blade arc. */
+function propPair(p){
+  let s='';
+  for(const sgn of[-1,1]){
+    const x=16+sgn*p.dx;
+    // p.y is supplied by plane(), set just ahead of the wing leading edge
+    s+=`<circle cx="${f(x)}" cy="${f(p.y)}" r="${f(p.r)}" fill="none" stroke-width="0.55" opacity=".42"/>`;
+    s+=`<path d="M${f(x-p.n)} ${f(p.y+p.n*0.7)}Q${f(x-p.n)} ${f(p.y-p.n*0.4)} ${f(x)} ${f(p.y-p.n*0.6)}`+
+       `Q${f(x+p.n)} ${f(p.y-p.n*0.4)} ${f(x+p.n)} ${f(p.y+p.n*0.7)}L${f(x+p.n*0.8)} ${f(p.y+p.h)}`+
+       `L${f(x-p.n*0.8)} ${f(p.y+p.h)}Z"/>`;
   }
-  if(o.nose)s+=`<circle cx="16" cy="${f(o.nose.y)}" r="${f(o.nose.r)}" fill="none" stroke="${c}" stroke-width="1" opacity=".8"/>`;
+  return s;
+}
+
+/* Fixed-wing assembly. Returns path soup; makeIcon wraps it in a styled <g>. */
+function plane(o){
+  let s=`<path d="${fuse(o)}"/>`;
+  s+=`<path d="${wingPair({y0:o.wy,rc:o.wrt,sp:o.ws,tipY:o.wtipy,tc:o.wtw,k:o.wk,le:o.wle,te:o.wte})}"/>`;
+  s+=`<path d="${wingPair({y0:o.sy,rc:o.srt||1.2,sp:o.ss,tipY:o.sty,tc:o.stw||0.9,k:0.42,le:0.46,te:0.30})}"/>`;
+  if(o.fin!==false)s+=`<path d="${fin({y0:o.sy-(o.finL||3.2),h:o.finL||3.2,w:o.finW})}"/>`;
+  if(o.eng)for(const e of o.eng)s+=nacellePair(Object.assign({},e,{yLE:leAt(o,e.dx),fw:o.fw}));
+  if(o.ceng){                            // centreline engine (trijet)
+    const c=o.ceng;
+    s+=`<path d="M${f(16-c.w)} ${f(c.y+c.w)}Q${f(16-c.w)} ${f(c.y)} 16 ${f(c.y)}`+
+       `Q${f(16+c.w)} ${f(c.y)} ${f(16+c.w)} ${f(c.y+c.w)}L${f(16+c.w)} ${f(c.y+c.h)}`+
+       `L${f(16-c.w)} ${f(c.y+c.h)}Z"/>`;
+  }
+  if(o.prop)for(const p of o.prop)s+=propPair(Object.assign({},p,{y:leAt(o,p.dx)-(p.lead==null?1.05:p.lead)}));
+  if(o.spinner)s+=`<circle cx="16" cy="${f(o.spinner.y)}" r="${f(o.spinner.r)}" fill="none" stroke-width="0.6" opacity=".45"/>`+
+    `<circle cx="16" cy="${f(o.spinner.y)}" r="0.55"/>`;
   return s;
 }
 
 const SHAPES={
-  /* widebody quad — long body, long swept wings, two nacelles per side (4 engines) */
-  wide4:c=>plane(c,{fw:2.1,ny:3,nl:5,ty:29,wy:12,ws:13.5,wtipy:19,wrt:5.4,wtw:2,sy:25,ss:5.6,sty:29,srt:1.7,stw:1.2,
-    eng:[{dx:4.6,w:1.25,y:15,h:3.6},{dx:8.4,w:1.1,y:16.6,h:3.2}]}),
-  /* widebody twin — long body, one big nacelle per side */
-  wide2:c=>plane(c,{fw:2.0,ny:3.2,nl:5,ty:29,wy:12.2,ws:13,wtipy:18.8,wrt:5.2,wtw:1.9,sy:25,ss:5.4,sty:29,srt:1.6,stw:1.2,
-    eng:[{dx:5.0,w:1.35,y:15.2,h:4}]}),
-  /* trijet — two wing nacelles + a centreline engine at the tail */
-  tri:c=>plane(c,{fw:1.95,ny:3.4,nl:4.8,ty:28.6,wy:12.6,ws:12,wtipy:18.4,wrt:4.9,wtw:1.8,sy:24.8,ss:5,sty:28.6,srt:1.5,
-    eng:[{dx:4.7,w:1.2,y:15.6,h:3.6}],ceng:{w:1.05,y:22.6,h:3.4}}),
-  /* narrowbody airliner — one nacelle per side */
-  narrow:c=>plane(c,{fw:1.7,ny:3.8,nl:4.4,ty:28,wy:13,ws:10.5,wtipy:19,wrt:4.6,wtw:1.5,sy:24.4,ss:4.6,sty:28,srt:1.4,
-    eng:[{dx:4.2,w:1.05,y:16,h:3.2}]}),
-  regional:c=>plane(c,{fw:1.5,ny:4.6,nl:4,ty:27,wy:14,ws:9,wtipy:18.6,wrt:3.9,wtw:1.3,sy:23.8,ss:4.2,sty:27,srt:1.3,
-    eng:[{dx:3.5,w:0.92,y:16.6,h:2.8}]}),
+  /* widebody quad — long body, cranked wing, two nacelles per side */
+  wide4:()=>plane({fw:1.95,ny:2.6,nl:4.6,ty:29.2,wy:12.2,ws:13.6,wtipy:19.4,wrt:5.6,wtw:1.5,
+    wk:0.3,wle:0.38,wte:0.07,sy:25.4,ss:4.9,sty:28.6,srt:1.55,stw:1,finL:3.6,finW:0.5,
+    eng:[{dx:4.6,w:1.15,h:3.7},{dx:8.4,w:1.0,h:3.2}]}),
+  /* widebody twin — long body, one large nacelle per side */
+  wide2:()=>plane({fw:1.9,ny:2.8,nl:4.6,ty:29,wy:12.4,ws:13.1,wtipy:19.2,wrt:5.4,wtw:1.45,
+    wk:0.3,wle:0.37,wte:0.07,sy:25.2,ss:4.7,sty:28.4,srt:1.5,stw:1,finL:3.5,finW:0.5,
+    eng:[{dx:5.0,w:1.28,h:4.1}]}),
+  /* trijet — two wing nacelles plus a centreline engine at the tail */
+  tri:()=>plane({fw:1.85,ny:3.0,nl:4.4,ty:28.8,wy:12.8,ws:12.1,wtipy:18.8,wrt:5.0,wtw:1.35,
+    wk:0.3,wle:0.37,wte:0.08,sy:24.9,ss:4.4,sty:28.0,srt:1.4,stw:0.95,finL:3.4,
+    eng:[{dx:4.7,w:1.15,h:3.7}],ceng:{w:1.0,y:22.6,h:3.6}}),
+  /* narrowbody — pronounced trailing-edge kink at the root fairing */
+  narrow:()=>plane({fw:1.6,ny:3.4,nl:4.0,ty:28.2,wy:13.2,ws:10.6,wtipy:19.4,wrt:4.8,wtw:1.15,
+    wk:0.28,wle:0.4,wte:0.06,sy:24.6,ss:4.0,sty:27.5,srt:1.3,stw:0.9,finL:3.2,
+    eng:[{dx:4.2,w:1.0,h:3.3}]}),
+  regional:()=>plane({fw:1.42,ny:4.2,nl:3.6,ty:27.2,wy:14.1,ws:9.0,wtipy:18.9,wrt:4.1,wtw:1,
+    wk:0.3,wle:0.36,wte:0.09,sy:23.9,ss:3.7,sty:26.6,srt:1.2,stw:0.85,finL:3,
+    eng:[{dx:3.5,w:0.88,h:2.9}]}),
   /* bizjet — slim body, rear-mounted nacelles, T-tail */
-  bizjet:c=>plane(c,{fw:1.25,ny:4.4,nl:4.2,ty:26.5,wy:14.6,ws:7.8,wtipy:19,wrt:3.2,wtw:1.1,sy:24.6,ss:4.2,sty:27,srt:1.2,
-    eng:[{dx:2.5,w:0.85,y:22,h:2.6}]}),
-  /* twin turboprop — wing-mounted prop discs, straighter wings */
-  turboprop:c=>plane(c,{fw:1.6,ny:4.8,nl:4.2,ty:27,wy:13.4,ws:10,wtipy:15.4,wrt:3.8,wtw:1.4,sy:24,ss:4.4,sty:27,srt:1.3,
-    prop:[{dx:5.6,y:12.6,r:2.4}]}),
-  /* quad turboprop — four prop discs, long straight high wing (C-130 etc) */
-  turboprop4:c=>plane(c,{fw:1.75,ny:4.4,nl:4.4,ty:27.8,wy:12.8,ws:12.6,wtipy:14.8,wrt:3.6,wtw:1.3,sy:24.2,ss:5,sty:27.8,srt:1.4,
-    prop:[{dx:3.3,y:11.4,r:2},{dx:7.1,y:11.9,r:2.2}]}),
-  /* military 4-engine jet heavy — AWACS / tanker / strategic transport */
-  'mil-heavy':c=>plane(c,{fw:1.95,ny:3.4,nl:4.6,ty:28.6,wy:12.5,ws:12.8,wtipy:17.6,wrt:4.8,wtw:1.7,sy:24.6,ss:5,sty:28.6,srt:1.5,
-    eng:[{dx:4.4,w:1.15,y:15.2,h:3.4},{dx:8.0,w:1.05,y:16.6,h:3}]}),
-  'piston-twin':c=>plane(c,{fw:1.35,ny:6,nl:3.4,ty:26.5,wy:14,ws:9,wtipy:15.4,wrt:3.2,wtw:1.1,sy:24,ss:4,sty:26.5,srt:1.1,
-    prop:[{dx:5,y:12.6,r:2}]}),
-  'piston-single':c=>plane(c,{fw:1.3,ny:8.5,nl:2.6,ty:27,wy:14.6,ws:8.5,wtipy:15.4,wrt:2.8,wtw:1,sy:24.6,ss:3.8,sty:27,srt:1,
-    nose:{y:8.2,r:2.3}}),
-  glider:c=>plane(c,{fw:0.9,ny:5.5,nl:3.2,ty:26.5,wy:15.4,ws:14.2,wtipy:16.6,wrt:1.8,wtw:0.7,sy:24,ss:4,sty:26.5,srt:0.9,stw:0.7}),
-  ultralight:c=>plane(c,{fw:1.05,ny:8.5,nl:2.2,ty:25.5,wy:13.6,ws:8,wtipy:14,wrt:2.2,wtw:0.9,sy:23,ss:3.2,sty:25.5,srt:0.9,
-    nose:{y:8.4,r:1.8}}),
-  def:c=>plane(c,{fw:1.5,ny:4.6,nl:4,ty:27.5,wy:13.4,ws:9.5,wtipy:18,wrt:4,wtw:1.4,sy:24,ss:4.3,sty:27.5,srt:1.3}),
-  /* fighter — sharp arrowhead with twin tail */
-  fighter:c=>`<path fill="${c}" d="M16 2.5 L17.8 11 L18.4 14 L30 19.5 L30 21.2 L18.6 18.4 L18.2 25 L20.6 29.5 L20.6 30.6 L16 28.8 L11.4 30.6 L11.4 29.5 L13.8 25 L13.4 18.4 L2 21.2 L2 19.5 L13.6 14 L14.2 11 Z"/>`,
-  /* flying wing — broad shallow chevron with a sawtooth trailing edge (B-2) */
-  'flying-wing':c=>`<path fill="${c}" d="M16 5.5 L30.5 20.5 L30.5 22 L22.2 20.2 L19 23.4 L16 21.6 L13 23.4 L9.8 20.2 L1.5 22 L1.5 20.5 Z"/>`,
-  /* helicopter — faint rotor disc, two-blade rotor, fuselage pod + tail boom */
-  heli:c=>`<circle cx="16" cy="13.5" r="9.2" fill="none" stroke="${c}" stroke-width="0.7" opacity=".28"/>`+
-    `<line x1="6.8" y1="13.5" x2="25.2" y2="13.5" stroke="${c}" stroke-width="1.7" stroke-linecap="round"/>`+
-    `<line x1="16" y1="4.3" x2="16" y2="22.7" stroke="${c}" stroke-width="1.7" stroke-linecap="round" opacity=".5"/>`+
-    `<ellipse cx="16" cy="14.5" rx="2.7" ry="4.6" fill="${c}"/>`+
-    `<rect x="15.35" y="18.5" width="1.3" height="8" rx="0.6" fill="${c}" opacity=".9"/>`+
-    `<line x1="12.8" y1="26" x2="19.2" y2="26" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>`,
-  /* tandem-rotor helicopter — two overlapping rotor discs fore & aft (Chinook) */
-  'heli-tandem':c=>`<circle cx="16" cy="9" r="7.6" fill="none" stroke="${c}" stroke-width="0.7" opacity=".26"/>`+
-    `<circle cx="16" cy="22.4" r="7.6" fill="none" stroke="${c}" stroke-width="0.7" opacity=".26"/>`+
-    `<rect x="13.4" y="6.5" width="5.2" height="19" rx="2.2" fill="${c}"/>`+
-    `<line x1="8.6" y1="9" x2="23.4" y2="9" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>`+
-    `<line x1="8.6" y1="22.4" x2="23.4" y2="22.4" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>`,
-  /* ground vehicle — top-down body, windshield band, roof */
-  vehicle:c=>`<rect x="11.3" y="8.5" width="9.4" height="15" rx="2.4" fill="${c}"/>`+
-    `<rect x="12.8" y="10" width="6.4" height="3" rx="1" fill="#0b1220" opacity=".55"/>`+
-    `<rect x="12.6" y="13.6" width="6.8" height="5" rx="1" fill="#0b1220" opacity=".32"/>`+
-    `<rect x="12.8" y="19.4" width="6.4" height="2.6" rx="1" fill="#0b1220" opacity=".5"/>`,
-  'vehicle-emg':c=>`<rect x="11.3" y="8.5" width="9.4" height="15" rx="2.4" fill="${c}"/>`+
-    `<rect x="12.6" y="14" width="6.8" height="5" rx="1" fill="#0b1220" opacity=".32"/>`+
-    `<rect x="12.8" y="20" width="6.4" height="2.4" rx="1" fill="#0b1220" opacity=".5"/>`+
-    `<rect x="12.4" y="10" width="7.2" height="2.4" rx="1.2" fill="#ffffff" opacity=".95"/>`,
+  bizjet:()=>plane({fw:1.18,ny:4.0,nl:3.8,ty:26.8,wy:14.7,ws:7.9,wtipy:19.4,wrt:3.3,wtw:0.85,
+    wk:0.3,wle:0.36,wte:0.09,sy:25.0,ss:4.3,sty:26.6,srt:1.2,stw:0.8,finL:3.4,finW:0.46,
+    eng:[{dx:2.15,w:0.80,y:20.9,h:3.0,side:true}]}),
+  /* twin turboprop — straighter high wing, prop discs on the leading edge */
+  turboprop:()=>plane({fw:1.52,ny:4.4,nl:3.8,ty:27.2,wy:13.6,ws:10.1,wtipy:15.6,wrt:3.9,wtw:1.2,
+    wk:0.45,wle:0.45,wte:0.45,sy:24.1,ss:4.4,sty:26.9,srt:1.35,stw:0.9,finL:3,
+    prop:[{dx:5.5,r:2.35,n:0.62,h:1.9}]}),
+  /* quad turboprop — long straight high wing, four discs (C-130 etc) */
+  turboprop4:()=>plane({fw:1.68,ny:4.0,nl:4.0,ty:28.0,wy:12.9,ws:12.7,wtipy:15.0,wrt:3.7,wtw:1.15,
+    wk:0.46,wle:0.46,wte:0.46,sy:24.3,ss:5.0,sty:27.7,srt:1.45,stw:0.95,finL:3.4,
+    prop:[{dx:3.3,r:1.95,n:0.55,h:1.7},{dx:7.1,r:2.1,n:0.58,h:1.8}]}),
+  /* four-engine military jet — AWACS / tanker / strategic transport */
+  'mil-heavy':()=>plane({fw:1.88,ny:3.0,nl:4.4,ty:28.8,wy:12.6,ws:12.9,wtipy:17.9,wrt:5.0,wtw:1.3,
+    wk:0.31,wle:0.38,wte:0.08,sy:24.8,ss:4.5,sty:28.2,srt:1.4,stw:0.95,finL:3.5,
+    eng:[{dx:4.4,w:1.08,h:3.5},{dx:8.0,w:0.98,h:3.1}]}),
+  'piston-twin':()=>plane({fw:1.28,ny:5.6,nl:3.0,ty:26.6,wy:14.2,ws:9.1,wtipy:15.6,wrt:3.3,wtw:0.95,
+    wk:0.46,wle:0.46,wte:0.46,sy:24.1,ss:4.0,sty:26.4,srt:1.15,stw:0.8,finL:2.8,
+    prop:[{dx:5.0,r:1.95,n:0.52,h:1.6}]}),
+  'piston-single':()=>plane({fw:1.22,ny:7.9,nl:2.4,ty:27.0,wy:14.6,ws:8.6,wtipy:15.6,wrt:2.9,wtw:0.9,
+    wk:0.48,wle:0.48,wte:0.48,sy:24.6,ss:3.8,sty:26.8,srt:1.05,stw:0.75,finL:2.8,
+    spinner:{y:8.0,r:2.25}}),
+  glider:()=>plane({fw:0.82,ny:5.2,nl:2.8,ty:26.6,wy:15.4,ws:14.3,wtipy:16.6,wrt:1.9,wtw:0.55,
+    wk:0.5,wle:0.5,wte:0.5,sy:24.1,ss:4.0,sty:26.4,srt:0.95,stw:0.65,finL:2.6,finW:0.34}),
+  ultralight:()=>plane({fw:0.98,ny:8.0,nl:2.0,ty:25.6,wy:13.6,ws:8.1,wtipy:14.1,wrt:2.3,wtw:0.8,
+    wk:0.5,wle:0.5,wte:0.5,sy:23.1,ss:3.2,sty:25.4,srt:0.95,stw:0.7,finL:2.4,
+    spinner:{y:8.1,r:1.75}}),
+  def:()=>plane({fw:1.45,ny:4.2,nl:3.8,ty:27.6,wy:13.6,ws:9.6,wtipy:18.2,wrt:4.2,wtw:1.15,
+    sy:24.1,ss:4.3,sty:27.4,srt:1.3,stw:0.9,finL:3}),
+
+  /* fighter — chined forebody, blended arrowhead, canted twin tails */
+  fighter:()=>`<path d="M16 2.2C16.9 4.6 17.5 7.6 17.7 10.4L18.3 14.2`+
+    `L29.6 19.3Q30.3 19.6 30.3 20.4L30.3 21.5L18.6 18.6L18.3 24.6L20.9 29.6`+
+    `L20.9 30.7L16 28.7L11.1 30.7L11.1 29.6L13.7 24.6L13.4 18.6L1.7 21.5`+
+    `L1.7 20.4Q1.7 19.6 2.4 19.3L13.7 14.2L14.3 10.4C14.5 7.6 15.1 4.6 16 2.2Z"/>`+
+    `<path d="M14.6 21.4L13.2 27.6L12.4 27.4L13.6 21.3Z"/>`+
+    `<path d="M17.4 21.4L18.8 27.6L19.6 27.4L18.4 21.3Z"/>`,
+  /* flying wing — shallow chevron with the sawtooth trailing edge (B-2) */
+  'flying-wing':()=>`<path d="M16 5.2L30.6 20.4Q31 20.8 30.9 21.4L30.7 22.4`+
+    `L22.4 20.4L19.1 23.6L16 21.7L12.9 23.6L9.6 20.4L1.3 22.4L1.1 21.4`+
+    `Q1 20.8 1.4 20.4Z"/>`,
+  /* helicopter — rotor disc, two-blade rotor, pod fuselage, boom, tail rotor */
+  heli:()=>`<circle cx="16" cy="13.4" r="9.3" fill="none" stroke-width="0.5" opacity=".22"/>`+
+    `<path d="M15.3 13.4 6.6 12.9 6.6 13.9 15.3 14.4Z"/>`+
+    `<path d="M16.7 13.4 25.4 12.9 25.4 13.9 16.7 14.4Z"/>`+
+    `<path d="M16 12.7 15.5 4.2 16.5 4.2Z" opacity=".55"/>`+
+    `<path d="M16 14.1 15.5 22.6 16.5 22.6Z" opacity=".55"/>`+
+    `<path d="M16 9.4Q18.7 9.4 18.7 14.2Q18.7 19.2 16 19.2Q13.3 19.2 13.3 14.2Q13.3 9.4 16 9.4Z"/>`+
+    `<path d="M15.28 18.4 16.72 18.4 16.42 26.2 15.58 26.2Z"/>`+
+    `<path d="M13.1 25.4 18.9 25.4 18.9 26.4 13.1 26.4Z"/>`+
+    `<circle cx="16" cy="26.9" r="1.5" fill="none" stroke-width="0.45" opacity=".38"/>`,
+  /* tandem-rotor helicopter — overlapping discs fore and aft (Chinook) */
+  'heli-tandem':()=>`<circle cx="16" cy="9.1" r="7.5" fill="none" stroke-width="0.5" opacity=".2"/>`+
+    `<circle cx="16" cy="22.3" r="7.5" fill="none" stroke-width="0.5" opacity=".2"/>`+
+    `<path d="M16 5.6Q18.9 5.6 18.9 11.5L18.9 21.4Q18.9 26.4 16 26.4Q13.1 26.4 13.1 21.4L13.1 11.5Q13.1 5.6 16 5.6Z"/>`+
+    `<path d="M8.6 8.6 23.4 8.6 23.4 9.6 8.6 9.6Z"/>`+
+    `<path d="M8.6 21.8 23.4 21.8 23.4 22.8 8.6 22.8Z"/>`,
+  /* ground vehicle — top-down body with glazing bands */
+  vehicle:()=>`<path d="M16 8.2Q20.7 8.2 20.7 12.4L20.7 19.6Q20.7 23.8 16 23.8Q11.3 23.8 11.3 19.6L11.3 12.4Q11.3 8.2 16 8.2Z"/>`+
+    `<path d="M12.9 10.2 19.1 10.2 19.1 12.9 12.9 12.9Z" fill="#0b1220" opacity=".5" stroke="none"/>`+
+    `<path d="M12.7 13.7 19.3 13.7 19.3 18.6 12.7 18.6Z" fill="#0b1220" opacity=".3" stroke="none"/>`+
+    `<path d="M12.9 19.5 19.1 19.5 19.1 21.9 12.9 21.9Z" fill="#0b1220" opacity=".46" stroke="none"/>`,
+  'vehicle-emg':()=>`<path d="M16 8.2Q20.7 8.2 20.7 12.4L20.7 19.6Q20.7 23.8 16 23.8Q11.3 23.8 11.3 19.6L11.3 12.4Q11.3 8.2 16 8.2Z"/>`+
+    `<path d="M12.7 14.1 19.3 14.1 19.3 19.0 12.7 19.0Z" fill="#0b1220" opacity=".3" stroke="none"/>`+
+    `<path d="M12.9 19.9 19.1 19.9 19.1 22.2 12.9 22.2Z" fill="#0b1220" opacity=".46" stroke="none"/>`+
+    `<rect x="12.3" y="9.9" width="7.4" height="2.5" rx="1.2" fill="#ffffff" opacity=".92" stroke="none"/>`,
 };
+
+/* Vertical extents of the authored geometry, used to centre each silhouette on
+   (16,16) before rotation. Held as a table rather than measured at runtime so
+   the icon factory stays allocation-free on the hot path. */
+const EXTENT={
+  wide4:[2.6,29.2], wide2:[2.8,29.0], tri:[3.0,28.8], narrow:[3.4,28.2],
+  regional:[4.2,27.2], bizjet:[4.0,26.8], turboprop:[4.4,27.2], turboprop4:[4.0,28.0],
+  'mil-heavy':[3.0,28.8], 'piston-twin':[5.6,26.6], 'piston-single':[5.8,27.0],
+  glider:[5.2,26.6], ultralight:[6.3,25.6], def:[4.2,27.6],
+  fighter:[2.2,30.7], 'flying-wing':[5.2,23.6], heli:[4.1,28.4], 'heli-tandem':[1.6,29.8],
+  vehicle:[8.2,23.8], 'vehicle-emg':[8.2,23.8],
+};
+function centreOffset(kind){
+  const e=EXTENT[kind]||EXTENT.def;
+  return 16-(e[0]+e[1])/2;
+}
+
+/* Half-width of the drawn geometry (wing semi-span for fixed wing, rotor or
+   body half-width otherwise). Paired with EXTENT to work out how much of the
+   32x32 box each silhouette actually fills. */
+const HALFW={
+  wide4:13.6, wide2:13.1, tri:12.1, narrow:10.6, regional:9.0, bizjet:7.9,
+  turboprop:10.1, turboprop4:12.7, 'mil-heavy':12.9, 'piston-twin':9.1,
+  'piston-single':8.6, glider:14.3, ultralight:8.1, def:9.6,
+  fighter:14.3, 'flying-wing':14.9, heli:9.4, 'heli-tandem':7.5,
+  vehicle:4.7, 'vehicle-emg':4.7,
+};
+/* Uniform scale that grows each silhouette to fill ~95% of the viewBox in its
+   dominant dimension. Without this a 30px marker drew a 20px aeroplane, since
+   most shapes only spanned 60-75% of the box. Because iconSize() already
+   derives the box from real wingspan, filling the box keeps drawn span
+   proportional to true span across types. Capped so stubby shapes (vehicles,
+   tandem rotors) do not balloon. */
+const FIT={};
+for(const k of Object.keys(HALFW)){
+  const e=EXTENT[k]||EXTENT.def;
+  const halfH=(e[1]-e[0])/2;
+  FIT[k]=Math.min(1.60,+(15.2/Math.max(HALFW[k],halfH)).toFixed(3));
+}
+function fitScale(kind){return FIT[kind]||FIT.def||1;}
+
+/* Combined centring + fit transform for a silhouette group. */
+function shapeTransform(kind){
+  const k=fitScale(kind), dy=centreOffset(kind);
+  return`translate(16 16) scale(${k}) translate(-16 ${f(-16+dy)})`;
+}
 
 /* Fallback pixel size per kind when the type's wingspan is unknown */
 const ISIZES={wide4:42,wide2:40,tri:38,narrow:30,regional:26,bizjet:23,turboprop:27,turboprop4:34,
@@ -240,20 +432,25 @@ function iconSize(kind,t){
   return ISIZES[kind]||26;
 }
 
-/* ── ALTITUDE COLOUR BANDS ───────────────────────────────────────────────── */
+/* ── ALTITUDE COLOUR BANDS ───────────────────────────────────────────────────
+   Reworked onto the Apple system palette so the map ramp reads as one family
+   with the rest of the UI: grey → yellow → green → teal → blue → purple.
+   Selection is systemOrange and watchlist is systemPink, both outside the ramp
+   so neither can be confused with an altitude band. */
 const ALT_BANDS=[
-  {max:0,     col:'#94a3b8',label:'GROUND'},
-  {max:3000,  col:'#cf9a4a',label:'<3K'},
-  {max:12000, col:'#c9ad57',label:'3\u201312K'},
-  {max:25000, col:'#57a386',label:'12\u201325K'},
-  {max:36000, col:'#5594b5',label:'25\u201336K'},
-  {max:Infinity,col:'#8d83b3',label:'36K+'},
+  {max:0,     col:'#98989D',label:'GROUND'},
+  {max:3000,  col:'#FFD60A',label:'<3K'},
+  {max:12000, col:'#30D158',label:'3\u201312K'},
+  {max:25000, col:'#64D2FF',label:'12\u201325K'},
+  {max:36000, col:'#0A84FF',label:'25\u201336K'},
+  {max:Infinity,col:'#BF5AF2',label:'36K+'},
 ];
+const SEL_COL='#FF9F0A', WATCH_COL='#FF375F';
 function altColor(a,gnd){
-  if(gnd||a===0)return'#94a3b8';
-  if(a==null)return'#57a386';
+  if(gnd||a===0)return'#98989D';
+  if(a==null)return'#30D158';
   for(const b of ALT_BANDS)if(a<b.max||b.max===Infinity)return b.col;
-  return'#8d83b3';
+  return'#BF5AF2';
 }
 function iconColor(raw){
   const a=pickN(raw?.alt_baro,raw?.altitude,raw?.alt);
@@ -261,27 +458,47 @@ function iconColor(raw){
   return altColor(a,gnd);
 }
 
-/* ── ICON FACTORY (needs Leaflet L) ──────────────────────────────────────── */
-function makeIcon(item,sel){
+/* ── ICON FACTORY (needs Leaflet L) ──────────────────────────────────────────
+   Separation from the basemap comes from a stroke drawn beneath the fill via
+   paint-order, not from CSS filters. Only the selected aircraft and watchlist
+   matches carry a filter, and there are at most a handful of those on screen. */
+function makeIcon(item,sel,watch){
   const raw=item.raw||{};
   const kind=classifyAC(raw);
   const t=raw.t||raw.type||'';
   const track=pickN(raw.track,raw.mag_heading,raw.true_heading)||0;
   let color;
-  if(sel)color='#ffb14a';
-  else if(kind==='vehicle-emg')color='#e84848';
-  else if(kind==='vehicle')color='#9aa7bd';
+  if(sel)color=SEL_COL;
+  else if(watch)color=WATCH_COL;
+  else if(kind==='vehicle-emg')color='#FF453A';
+  else if(kind==='vehicle')color='#98989D';
   else color=iconColor(raw);
-  const halo=sel
-    ? 'filter:drop-shadow(0 0 4px rgba(255,177,74,.95)) drop-shadow(0 0 1px rgba(0,0,0,.85));'
-    : 'filter:drop-shadow(0 0 1.4px rgba(0,0,0,.65)) drop-shadow(0 0 1px rgba(255,255,255,.25));';
+
+  const glow=sel?'filter:drop-shadow(0 0 5px rgba(255,159,10,.9));'
+    :watch?'filter:drop-shadow(0 0 5px rgba(255,55,95,.85));':'';
   const sz=iconSize(kind,t);
-  const body=(SHAPES[kind]||SHAPES.def)(color);
-  const h=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${sz}" height="${sz}" style="transform:rotate(${track}deg);display:block;${halo}">${body}</svg>`;
+  const body=(SHAPES[kind]||SHAPES.def)();
+  const h=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${sz}" height="${sz}" `+
+    `style="transform:rotate(${track}deg);display:block;${glow}">`+
+    `<g transform="${shapeTransform(kind)}" fill="${color}" stroke="rgba(0,0,0,.55)" `+
+    `stroke-width="${f(0.85/fitScale(kind))}" stroke-linejoin="round" paint-order="stroke fill">${body}</g></svg>`;
   return L.divIcon({html:h,className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],popupAnchor:[0,-(sz/2+5)]});
+}
+
+/* Standalone silhouette for panel use (watchlist rows, flight strip). No
+   Leaflet dependency, inherits currentColor unless a colour is supplied. */
+function iconMarkup(item,px,color,track){
+  const raw=item.raw||{};
+  const kind=classifyAC(raw);
+  const body=(SHAPES[kind]||SHAPES.def)();
+  const rot=track==null?'':`transform:rotate(${track}deg);`;
+  return`<svg viewBox="0 0 32 32" width="${px}" height="${px}" aria-hidden="true" style="display:block;${rot}">`+
+    `<g transform="${shapeTransform(kind)}" fill="${color||'currentColor'}">${body}</g></svg>`;
 }
 
 function isVehicle(raw){const k=classifyAC(raw||{});return k==='vehicle'||k==='vehicle-emg';}
 
-window.AC={classifyAC,acCategory,CHIPS,SHAPES,ISIZES,SPAN,airframeSpan,iconSize,ALT_BANDS,altColor,iconColor,makeIcon,isVehicle};
+window.AC={classifyAC,acCategory,CHIPS,SHAPES,ISIZES,SPAN,airframeSpan,iconSize,
+  ALT_BANDS,altColor,iconColor,makeIcon,iconMarkup,isVehicle,centreOffset,fitScale,shapeTransform,
+  SEL_COL,WATCH_COL};
 })();

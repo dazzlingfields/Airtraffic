@@ -19,6 +19,15 @@ const PAN_DEBOUNCE=900;
 const MAX_HIST=30;           // trail points kept per aircraft
 const MIN_REFETCH_NM=40;     // pan distance before refetching view
 const STORE='overhead.settings.v2';
+/* ── WATCHLIST ───────────────────────────────────────────────────────────────
+   Registrations tracked nationwide rather than only inside the local /point/
+   radius. airplanes.live exposes /v2/reg/{a,b,c} for an exact match on several
+   registrations in one request, so the whole watchlist costs a single call per
+   cycle. The REST API is rate limited to 1 req/s, so the call is staggered
+   inside the existing poll rather than given its own timer. */
+const WATCH_REGS=['ZK-IPB','ZK-IPC','ZK-IPJ'];
+const WATCH_HOLD=90000;      // ms a contact stays on the card after signal loss
+const WATCH_STAGGER=1600;    // ms after the main poll before the watch call
 /* ── resilient data layer tunables ───────────────────────────────────────── */
 const FETCH_TIMEOUT=12000;   // ms before a hung request aborts
 const POLL_MAX=120000;       // ms, backoff ceiling
@@ -42,11 +51,13 @@ const S={
   theme:'auto',               // auto|dark|light
   units:'imperial',           // imperial|metric
   follow:false,
-  openaipKey:'388e7444c5966dcb282adac4bef1a843',aeroOpacity:0.9,
+  openaipKey:'',aeroOpacity:0.9,
   overlays:{trails:true,rings:true,airports:true,labels:false,weather:false,aero:false,proc:false},
   wx:{frames:[],host:'',idx:0,layers:{},playing:false,timer:null,opacity:0.6},
   metar:new Map(),            // ICAO -> {ts,raw,parsed,ok,pending?}
   disruptLayer:null,disruptions:[],aptIndex:null,
+  /* reg -> {item, lastSeen, lost} for the watchlist card */
+  watch:new Map(),watchTimer:null,
 };
 /* network health for the resilient poll loop */
 const NET={fails:0,lastOk:0,nextAt:0,backoffUntil:0,rateLimited:false,polling:false};
@@ -285,6 +296,9 @@ function airportTraffic(a){
 
 /* ── FILTER PREDICATE ────────────────────────────────────────────────────── */
 function passesFilter(item){
+  /* Tracked registrations are never filtered out. The watchlist is a standing
+     instruction; a stray chip or altitude slider must not be able to hide it. */
+  if(isWatched(item))return true;
   const raw=item.raw||{};
   const kind=AC.classifyAC(raw);
   const chip=AC.acCategory(kind).chip;
@@ -408,6 +422,7 @@ function ensureMap(){
   S.map.createPane('aeroPane');S.map.getPane('aeroPane').style.zIndex=150;
   S.ringLayer=L.layerGroup().addTo(S.map);
   S.approachLayer=L.layerGroup().addTo(S.map);
+  S.trailRenderer=L.canvas({padding:0.3});
   S.trailLayer=L.layerGroup().addTo(S.map);
   S.airportLayer=L.layerGroup().addTo(S.map);
   S.procLayer=L.layerGroup().addTo(S.map);
@@ -837,6 +852,128 @@ function onPopupOpen(e){
   });
 }
 
+/* ── WATCHLIST ───────────────────────────────────────────────────────────────
+   A small, always-truthful readout for a fixed set of registrations. The card
+   renders only when at least one is contactable, so an empty watchlist costs
+   no screen space at all. Contacts persist for WATCH_HOLD after signal loss so
+   a momentary coverage gap does not make a row flicker out; those rows are
+   marked LOST and carry their last known position rather than pretending to be
+   live. Nothing here writes to S.nearby, so the watchlist can never perturb
+   the local traffic list, the filters, or the field statistics. */
+const watchKey=r=>norm(r).replace(/[^A-Z0-9]/g,'');
+
+async function fetchWatchlist(){
+  if(!WATCH_REGS.length)return;
+  const url=`${API}/v2/reg/${WATCH_REGS.map(encodeURIComponent).join(',')}`;
+  let data=null;
+  try{data=await fetchJSON(url);}catch(_){return;}          // silent: never breaks the main poll
+  const list=data?.ac||data?.aircraft||[];
+  const now=Date.now();
+  const hit=new Set();
+  for(const ac of list){
+    const reg=watchKey(ac.r||ac.reg||'');
+    if(!reg)continue;
+    const want=WATCH_REGS.find(w=>watchKey(w)===reg);
+    if(!want)continue;
+    const lat=pickN(ac.lat,ac.latitude),lon=pickN(ac.lon,ac.longitude);
+    const key=keyFor({reg:ac.r||ac.reg,callsign:ac.flight||ac.callsign,hex:ac.hex});
+    const prev=S.allAC.get(key)||{};
+    const item={
+      key,lat,lon,
+      distKm:(S.user&&lat!=null)?hav(S.user.lat,S.user.lon,lat,lon):null,
+      bearing:(S.user&&lat!=null)?bearing(S.user.lat,S.user.lon,lat,lon):null,
+      reg:norm(ac.r||ac.reg),hex:norm(ac.hex),callsign:norm(ac.flight||ac.callsign),
+      firstSeen:prev.firstSeen||now,raw:ac,live:ac,
+      meta:prev.meta||null,route:prev.route||null,routeTried:prev.routeTried||false,
+      _ph:prev._ph||null,_phCand:prev._phCand||null,_phCandN:prev._phCandN||0,
+    };
+    item.distNm=item.distKm==null?null:item.distKm/1.852;
+    hit.add(want);
+    S.watch.set(want,{item,lastSeen:now,lost:false});
+    /* Fold into the main store so the aircraft draws on the map, gets a trail,
+       and can be selected like any other contact even when it is far outside
+       the local query radius. */
+    if(lat!=null&&lon!=null){S.allAC.set(key,item);addHist(item);}
+  }
+  for(const[reg,rec]of S.watch){
+    if(hit.has(reg))continue;
+    if(now-rec.lastSeen>WATCH_HOLD)S.watch.delete(reg);
+    else rec.lost=true;
+  }
+  renderWatchlist();renderPlaneLayer();
+}
+
+/* True when this contact is one of the tracked registrations. */
+function isWatched(item){
+  const r=watchKey(item?.reg||'');
+  return !!r&&WATCH_REGS.some(w=>watchKey(w)===r);
+}
+
+/* Human-readable position: nearest airport if close, otherwise a bearing and
+   distance from it. Falls back to raw coordinates when the dataset is absent. */
+function watchWhere(item){
+  if(item.lat==null||item.lon==null)return'Position unknown';
+  /* nearestAirport() returns {apt, distNm}, not the airport record itself. */
+  const near=nearestAirport(item.lat,item.lon);
+  if(!near||!near.apt)return fmtCoords(item.lat,item.lon);
+  const apt=near.apt,nm=near.distNm;
+  const name=apt.c||apt.n||apt.ia||apt.ic||'field';
+  if(nm<4)return`At ${name}`;
+  if(nm<12)return`Near ${name}`;
+  const brg=compass(bearing(apt.lat,apt.lon,item.lat,item.lon));
+  return`${fmtDist(nm)} ${brg} of ${name}`;
+}
+
+function watchRowHtml(reg,rec){
+  const it=rec.item,raw=it.raw||{};
+  const gnd=!isAirborne(raw);
+  const state=rec.lost?'LOST':gnd?'ON GROUND':'AIRBORNE';
+  const cls=rec.lost?'lost':gnd?'gnd':'air';
+  const trk=pickN(raw.track,raw.mag_heading,raw.true_heading);
+  const svg=AC.iconMarkup(it,20,null,trk==null?null:trk);
+  const bits=[];
+  if(!gnd&&!rec.lost){bits.push(fmtAlt(raw));bits.push(fmtSpd(raw));}
+  if(it.distNm!=null)bits.push(fmtDist(it.distNm)+' away');
+  const age=rec.lost?`<span class="wl-age">last seen ${fmtAgo(rec.lastSeen)}</span>`:'';
+  return`<button class="wl-row ${cls}" type="button" data-wkey="${it.key}" data-wlat="${it.lat??''}" data-wlon="${it.lon??''}">
+    <span class="wl-ic">${svg}</span>
+    <span class="wl-main">
+      <span class="wl-top"><b class="wl-reg">${reg}</b><span class="wl-state ${cls}">${state}</span></span>
+      <span class="wl-where">${watchWhere(it)}</span>
+      ${bits.length?`<span class="wl-tel">${bits.join(' \u00b7 ')}</span>`:''}
+      ${age}
+    </span>
+    <span class="wl-go" aria-hidden="true">\u203a</span>
+  </button>`;
+}
+
+/* The card is removed from the layout entirely when nothing is contactable,
+   and its height follows the number of matches, so one, two or three entries
+   all render without a fixed container. */
+function renderWatchlist(){
+  const card=el('watchCard'),list=el('watchList'),cnt=el('watchCount');
+  if(!card||!list)return;
+  const rows=WATCH_REGS.filter(r=>S.watch.has(r));
+  if(!rows.length){card.style.display='none';list.innerHTML='';return;}
+  card.style.display='';
+  const live=rows.filter(r=>!S.watch.get(r).lost).length;
+  if(cnt)cnt.textContent=`${live}/${WATCH_REGS.length}`;
+  list.innerHTML=rows.map(r=>watchRowHtml(r,S.watch.get(r))).join('');
+}
+
+/* Delegated: jump the map to a watchlist contact and select it. */
+function wireWatchlist(){
+  const list=el('watchList');
+  if(!list)return;
+  list.addEventListener('click',e=>{
+    const b=e.target.closest('.wl-row');if(!b)return;
+    const key=b.dataset.wkey;
+    const lat=parseFloat(b.dataset.wlat),lon=parseFloat(b.dataset.wlon);
+    if(S.map&&isFinite(lat)&&isFinite(lon))S.map.flyTo([lat,lon],Math.max(S.map.getZoom(),9),{duration:.8});
+    if(key&&S.allAC.has(key))selectAircraft(key);
+  });
+}
+
 /* ── DISRUPTIONS · diversions · holding · emergencies ─────────────────────────
    Client-side anomaly detection over tracked traffic. Diversion needs adsbdb
    route metadata (origin/destination); holding is derived from trail geometry.
@@ -986,10 +1123,11 @@ function renderPlaneLayer(){
     const track=pickN(raw.track,raw.mag_heading,raw.true_heading)||0;
     const kind=AC.classifyAC(raw);
     const altB=Math.round((altNumeric(raw)||0)/1000);          // altitude colour bucket
-    const sig=`${kind}|${altB}|${Math.round(track/2)*2}|${sel?1:0}`;
+    const watched=isWatched(item);
+    const sig=`${kind}|${altB}|${Math.round(track/2)*2}|${sel?1:0}|${watched?1:0}`;
     let rec=S.markers.get(item.key);
     if(!rec){
-      const m=L.marker([item.lat,item.lon],{icon:AC.makeIcon(item,sel)});
+      const m=L.marker([item.lat,item.lon],{icon:AC.makeIcon(item,sel,watched)});
       m._item=item;
       m.bindPopup(()=>buildPopup(m._item));
       m.on('click',()=>selectAircraft(m._item.key));
@@ -999,7 +1137,7 @@ function renderPlaneLayer(){
     }else{
       rec.m._item=item;
       rec.m.setLatLng([item.lat,item.lon]);
-      if(rec.sig!==sig){rec.m.setIcon(AC.makeIcon(item,sel));rec.sig=sig;}
+      if(rec.sig!==sig){rec.m.setIcon(AC.makeIcon(item,sel,watched));rec.sig=sig;}
     }
     // labels (only re-bind when text/visibility changes)
     const want=S.overlays.labels?(item.callsign||item.reg||item.hex||''):'';
@@ -1023,16 +1161,29 @@ function renderMap(){
       .addTo(S.userLayer).bindPopup(`<div class="pp-reg">\u{1F4CD} YOUR POSITION</div><div class="pp-row">${fmtCoords(S.user.lat,S.user.lon)}</div>`);
   }
   if(S.overlays.trails){
+    /* One polyline per run of same-coloured points rather than one per segment.
+       At MAX_HIST=30 across a busy view this was building several thousand
+       layer objects every cycle; grouping typically collapses a 30-point trail
+       into two or three polylines, and the shared canvas renderer keeps the
+       whole layer off the SVG pane. */
     for(const[key,pts]of S.histories.entries()){
       if(pts.length<2)continue;
       const item=S.allAC.get(key);if(item&&!passesFilter(item))continue;
+      const selected=key===S.selectedKey;
+      const style={weight:selected?3.5:2,opacity:selected?.92:.5,
+        lineCap:'round',lineJoin:'round',renderer:S.trailRenderer,interactive:false};
+      let run=[[pts[0].lat,pts[0].lon]],runCol=null;
       for(let i=1;i<pts.length;i++){
         const a=pts[i-1],b=pts[i];
-        L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{
-          color:trailCol((a.speed+b.speed)/2,(a.alt+b.alt)/2),
-          weight:key===S.selectedKey?3.5:2,opacity:key===S.selectedKey?.92:.5,lineCap:'round',lineJoin:'round',
-        }).addTo(S.trailLayer);
+        const col=trailCol((a.speed+b.speed)/2,(a.alt+b.alt)/2);
+        if(runCol===null)runCol=col;
+        if(col!==runCol){
+          L.polyline(run,Object.assign({color:runCol},style)).addTo(S.trailLayer);
+          run=[[a.lat,a.lon]];runCol=col;                 // carry the joint over
+        }
+        run.push([b.lat,b.lon]);
       }
+      if(run.length>1)L.polyline(run,Object.assign({color:runCol||'#8E8E93'},style)).addTo(S.trailLayer);
     }
   }
   drawRings();renderAirports();renderProcedures();renderPlaneLayer();
@@ -1263,9 +1414,12 @@ function renderEmergency(){
 /* ── RENDER ALL ──────────────────────────────────────────────────────────── */
 function renderAll(){
   S.nearbyFiltered=S.nearby.filter(passesFilter);
-  renderPrimary();
-  renderNearbyList();renderStats();renderEmergency();renderDisruptions();renderPlaneLayer();
-  if(S.overlays.trails)renderMap();
+  renderPrimary();renderWatchlist();
+  renderNearbyList();renderStats();renderEmergency();renderDisruptions();
+  /* renderMap() ends by calling renderPlaneLayer(), so only call it here when
+     the map pass is being skipped. Previously both ran and the plane layer was
+     reconciled twice per cycle. */
+  if(S.overlays.trails)renderMap();else renderPlaneLayer();
 }
 
 /* ── LOAD ────────────────────────────────────────────────────────────────── */
@@ -1293,6 +1447,11 @@ function scheduleNext(delay){
   clearTimeout(S.refreshTimer);
   NET.nextAt=Date.now()+delay;
   S.refreshTimer=setTimeout(()=>poll(false),delay);
+  /* One extra request per cycle for the watchlist, offset from the main call
+     so the pair never lands inside the same rate-limit second. It is scheduled
+     rather than awaited: a slow or failed watch call must not delay traffic. */
+  clearTimeout(S.watchTimer);
+  if(WATCH_REGS.length)S.watchTimer=setTimeout(fetchWatchlist,Math.min(delay,WATCH_STAGGER));
 }
 async function poll(manual){
   if(!S.user)return;
@@ -1349,6 +1508,8 @@ async function selectAircraft(key){
   }catch(_){}
 }
 window.__sel=selectAircraft;
+/* test seam: exercised by the offline harness, harmless in production */
+window.__test={fetchWatchlist,renderWatchlist,isWatched,watchWhere,S,WATCH_REGS};
 
 /* ── SETTINGS PERSIST ────────────────────────────────────────────────────── */
 function saveSettings(){
@@ -1371,6 +1532,17 @@ function loadSettings(){
       F.altMin=d.F.altMin??0;F.altMax=d.F.altMax??45000;
       F.airborneOnly=!!d.F.airborneOnly;F.militaryOnly=!!d.F.militaryOnly;F.emergencyOnly=!!d.F.emergencyOnly;}
   }catch(_){}
+}
+
+/* ── TOOLS ROW LABELS ────────────────────────────────────────────────────── */
+const sentence=v=>String(v).charAt(0).toUpperCase()+String(v).slice(1).toLowerCase();
+function syncToolLabels(){
+  if(el('unitBtn'))el('unitBtn').textContent='Units · '+sentence(S.units);
+  if(el('themeBtn'))el('themeBtn').textContent='Theme · '+sentence(S.theme);
+  if(el('followBtn')){
+    el('followBtn').textContent='Follow · '+(S.follow?'On':'Off');
+    el('followBtn').classList.toggle('on',S.follow);
+  }
 }
 
 /* ── THEME ───────────────────────────────────────────────────────────────── */
@@ -1426,15 +1598,84 @@ function wireUI(){
   el('fEmg').onclick=()=>{F.emergencyOnly=!F.emergencyOnly;syncFilterUI();saveSettings();renderAll();};
   el('fReset').onclick=()=>{F.q='';F.cats=new Set(AC.CHIPS);F.altMin=0;F.altMax=45000;F.airborneOnly=F.militaryOnly=F.emergencyOnly=false;syncFilterUI();saveSettings();renderAll();};
   // units / theme / follow
-  el('unitBtn').onclick=()=>{S.units=S.units==='imperial'?'metric':S.units==='metric'?'hybrid':'imperial';el('unitBtn').textContent='UNITS · '+S.units.toUpperCase();saveSettings();renderAll();syncFilterUI();drawRings();};
-  el('themeBtn').onclick=()=>{S.theme=S.theme==='auto'?'dark':S.theme==='dark'?'light':'auto';applyTheme();saveSettings();};
-  el('followBtn').onclick=()=>{S.follow=!S.follow;el('followBtn').classList.toggle('on',S.follow);el('followBtn').textContent=S.follow?'FOLLOW · ON':'FOLLOW · OFF';saveSettings();if(S.follow){const t=(S.selectedKey&&S.allAC.get(S.selectedKey))||S.nearbyFiltered[0];if(t&&t.lat!=null)S.map.panTo([t.lat,t.lon]);}};
+  el('unitBtn').onclick=()=>{S.units=S.units==='imperial'?'metric':S.units==='metric'?'hybrid':'imperial';syncToolLabels();saveSettings();renderAll();syncFilterUI();drawRings();};
+  el('themeBtn').onclick=()=>{S.theme=S.theme==='auto'?'dark':S.theme==='dark'?'light':'auto';applyTheme();syncToolLabels();saveSettings();};
+  el('followBtn').onclick=()=>{S.follow=!S.follow;syncToolLabels();saveSettings();if(S.follow){const t=(S.selectedKey&&S.allAC.get(S.selectedKey))||S.nearbyFiltered[0];if(t&&t.lat!=null)S.map.panTo([t.lat,t.lon]);}};
   if(el('recenterBtn'))el('recenterBtn').onclick=()=>{if(S.user&&S.map)S.map.setView([S.user.lat,S.user.lon],Math.max(S.map.getZoom(),10),{animate:true});};
   el('refreshBtn').onclick=()=>poll(true);
   // collapsibles
   document.querySelectorAll('[data-collapse]').forEach(h=>h.onclick=()=>{
     const card=h.closest('.card');card.classList.toggle('collapsed');
   });
+}
+
+/* ── SHELL: rail, sheet, layers panel ────────────────────────────────────────
+   Previously this lived in an inline <script> at the foot of index.html while
+   wireUI() owned the rest of the interaction, giving panel state two owners
+   and two matchMedia listeners. It is consolidated here so there is exactly
+   one source of truth for what is open. */
+function wireShell(){
+  const rail=el('rail'),tgl=el('railToggle'),tab=el('railTab'),
+        handle=el('sheetHandle'),lay=el('layersToggle'),ctl=document.querySelector('.map-ctl'),
+        scrim=el('sheetScrim'),
+        mq=window.matchMedia('(max-width:900px)');
+  const mobile=()=>mq.matches;
+  const setExpanded=v=>{if(tgl)tgl.setAttribute('aria-expanded',v?'true':'false');};
+
+  function closeLayers(){
+    if(!ctl)return;
+    ctl.classList.remove('show');
+    if(lay){lay.classList.remove('on');lay.setAttribute('aria-expanded','false');}
+  }
+  function toggleLayers(){
+    if(!ctl)return;
+    const open=ctl.classList.toggle('show');
+    if(lay){lay.classList.toggle('on',open);lay.setAttribute('aria-expanded',open?'true':'false');}
+  }
+  function toggleRail(){
+    if(mobile()){
+      const open=rail.classList.toggle('sheet-open');
+      if(scrim)scrim.classList.toggle('on',open);
+    }else{
+      rail.classList.toggle('collapsed');
+      setExpanded(!rail.classList.contains('collapsed'));
+    }
+    closeLayers();
+  }
+  function closeSheet(){
+    rail.classList.remove('sheet-open');
+    if(scrim)scrim.classList.remove('on');
+  }
+
+  if(tgl)tgl.addEventListener('click',toggleRail);
+  if(tab)tab.addEventListener('click',()=>{rail.classList.remove('collapsed');setExpanded(true);});
+  if(handle)handle.addEventListener('click',()=>{
+    const open=rail.classList.toggle('sheet-open');
+    if(scrim)scrim.classList.toggle('on',open);
+  });
+  if(scrim)scrim.addEventListener('click',closeSheet);
+  if(lay)lay.addEventListener('click',toggleLayers);
+
+  /* Dismiss the layers panel on outside click or Escape, the way a popover
+     behaves rather than a permanently docked control. */
+  document.addEventListener('click',e=>{
+    if(!ctl||!ctl.classList.contains('show'))return;
+    if(ctl.contains(e.target)||(lay&&lay.contains(e.target)))return;
+    closeLayers();
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='Escape')return;
+    closeLayers();
+    if(mobile())closeSheet();
+  });
+
+  function onMQ(){
+    closeLayers();
+    if(mobile()){rail.classList.remove('collapsed');}
+    else{closeSheet();setExpanded(!rail.classList.contains('collapsed'));}
+  }
+  mq.addEventListener?mq.addEventListener('change',onMQ):mq.addListener(onMQ);
+  onMQ();
 }
 
 /* ── GEOLOCATION ─────────────────────────────────────────────────────────── */
@@ -1475,10 +1716,8 @@ function init(){
   if(window.matchMedia){const mq=window.matchMedia('(prefers-color-scheme: dark)');
     const h=()=>{if(S.theme==='auto')applyTheme();};
     mq.addEventListener?mq.addEventListener('change',h):mq.addListener(h);}
-  el('unitBtn').textContent='UNITS · '+S.units.toUpperCase();
-  el('followBtn').textContent=S.follow?'FOLLOW · ON':'FOLLOW · OFF';
-  el('followBtn').classList.toggle('on',S.follow);
-  ensureMap();wireUI();syncOverlayButtons();syncFilterUI();
+  syncToolLabels();
+  ensureMap();wireUI();wireShell();wireWatchlist();syncOverlayButtons();syncFilterUI();
   if(el('aeroOp'))el('aeroOp').value=Math.round(S.aeroOpacity*100);
   if(el('aeroKeyInput')&&S.openaipKey)el('aeroKeyInput').value=S.openaipKey;
   if(S.overlays.weather)toggleWeather(true);
@@ -1487,6 +1726,7 @@ function init(){
   renderAll();
   loadAirportData();
   setStatus('LOCATING\u2026','warn');locateUser();
+  if(WATCH_REGS.length)fetchWatchlist();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
